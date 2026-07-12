@@ -33,7 +33,7 @@ export function ProductPage({ renderId }: { renderId: string }) {
 /** The classic missing-image glyph, plus the filename the browser asked for. */
 function BrokenImage() {
   return (
-    <div className="flex flex-col items-center gap-2 text-[#8a93a3]">
+    <div className="flex flex-col items-center gap-2 text-[#5d6675]">
       <svg viewBox="0 0 24 24" className="size-8" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
         <rect x="3" y="4" width="18" height="16" rx="2" />
         <path d="m3 16 5-5 4 4 3-3 6 6" />

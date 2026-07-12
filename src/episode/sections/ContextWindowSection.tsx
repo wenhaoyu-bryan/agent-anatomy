@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { whenIdle } from "../../lib/idle";
 import type { ScrollTrigger as ScrollTriggerType } from "gsap/ScrollTrigger";
 import { useGlSlot, useGlStore } from "../gl/glStore";
 import { S3_DEMO_ITEMS, S3_DEMO_TOTAL } from "../gl/demoStream";
@@ -25,7 +26,9 @@ export function ContextWindowSection() {
     if (mode !== "webgl" || !sectionRef.current) return;
     let trigger: ScrollTriggerType | undefined;
     let cancelled = false;
-    void Promise.all([import("gsap"), import("gsap/ScrollTrigger")]).then(
+    void whenIdle()
+      .then(() => Promise.all([import("gsap"), import("gsap/ScrollTrigger")]))
+      .then(
       ([{ gsap }, { ScrollTrigger }]) => {
         if (cancelled || !sectionRef.current) return;
         gsap.registerPlugin(ScrollTrigger);

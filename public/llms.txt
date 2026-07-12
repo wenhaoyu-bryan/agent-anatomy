@@ -1,0 +1,18 @@
+# Agent Anatomy
+
+> Interactive visual essays explaining how AI systems actually work, for readers with no AI background. Episode 01, "How an AI agent works," teaches the agent loop (think → act → observe → repeat), the context window as a finite token budget, and tool use — through a scroll-driven WebGL essay and an interactive replay of a scripted agent run fixing a broken product page.
+
+The project ships two things: the essay, and an open trace format + replay engine. A trace is a JSON file describing one complete agent run (system prompt, user message, thinking, tool calls, tool results with artifact snapshots, assistant message — each with a token estimate). The headless replay engine renders any trace that fits the schema.
+
+Made by Wenhao Yu (wenhaoyu.bryan@gmail.com). MIT licensed.
+
+## Pages
+
+- [Series index](https://wenhaoyu-bryan.github.io/agent-anatomy/): all episodes and their status
+- [Episode 01 — How an AI agent works](https://wenhaoyu-bryan.github.io/agent-anatomy/episodes/how-an-agent-works/): the full interactive essay
+
+## Repository
+
+- [Source on GitHub](https://github.com/wenhaoyu-bryan/agent-anatomy): schema, engine, traces, and the essay
+- [Trace format spec](https://github.com/wenhaoyu-bryan/agent-anatomy/blob/main/docs/trace-format.md): how to write your own trace file
+- [JSON Schema](https://github.com/wenhaoyu-bryan/agent-anatomy/blob/main/docs/trace.schema.json): machine-readable trace schema
