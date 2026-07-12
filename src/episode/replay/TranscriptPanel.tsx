@@ -12,8 +12,20 @@ export function TranscriptPanel() {
   const frame = useReplayStore((s) => s.frame);
   const currentRef = useRef<HTMLLIElement>(null);
 
+  // Keep the current event in view by scrolling ONLY the panel. scrollIntoView
+  // would climb to the document and yank the page while the reader is
+  // elsewhere — scroll-jacking, which §8 forbids.
   useEffect(() => {
-    currentRef.current?.scrollIntoView({ block: "nearest" });
+    const item = currentRef.current;
+    const container = item?.closest<HTMLElement>("[data-replay-scroll]");
+    if (!item || !container) return;
+    const c = container.getBoundingClientRect();
+    const r = item.getBoundingClientRect();
+    if (r.bottom > c.bottom) {
+      container.scrollTop += r.bottom - c.bottom;
+    } else if (r.top < c.top) {
+      container.scrollTop -= c.top - r.top;
+    }
   }, [frame.index]);
 
   if (frame.contextItems.length === 0) {
@@ -33,7 +45,7 @@ export function TranscriptPanel() {
             key={event.id}
             ref={isCurrent ? currentRef : undefined}
             aria-current={isCurrent ? "step" : undefined}
-            className={`replay-item rounded-r border-l-2 py-2 pr-3 pl-3 transition-colors duration-200 ${
+            className={`replay-item rounded-r border-l-2 py-2 pr-3 pl-3 ${
               isCurrent ? "bg-[var(--color-panel)]" : "bg-transparent"
             }`}
             style={{ borderLeftColor: EVENT_META[event.type].color }}
