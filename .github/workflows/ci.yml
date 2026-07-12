@@ -1,0 +1,23 @@
+name: CI
+
+on:
+  push:
+    branches-ignore: [main] # main is covered by the deploy workflow's build job
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm test
+      - run: pnpm trace:validate
+      # The checked-in JSON Schema must match the zod source of truth.
+      - run: pnpm schema:build && git diff --exit-code docs/trace.schema.json
+      - run: pnpm build
