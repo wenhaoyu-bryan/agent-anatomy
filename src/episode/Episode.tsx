@@ -1,14 +1,14 @@
 import { ReplaySection } from "./replay/ReplaySection";
+import { LoopSection } from "./sections/LoopSection";
 import { ContextWindowSection } from "./sections/ContextWindowSection";
+import { CloseSection } from "./sections/CloseSection";
 import { GlRoot } from "./gl/GlRoot";
+import { MotionRoot } from "./scroll/MotionRoot";
 import { useGlSlot } from "./gl/glStore";
 
 const HOME_URL = import.meta.env.BASE_URL;
 
-/**
- * Episode shell. S1 hero + S4 replay so far; S2/S3/S5 and scroll
- * orchestration arrive in M3–M4.
- */
+/** Episode shell — all five sections (PLAN §5), one canvas, one motion root. */
 export function Episode() {
   return (
     <>
@@ -20,10 +20,13 @@ export function Episode() {
       </a>
       <main id="main">
         <Hero />
+        <LoopSection />
         <ContextWindowSection />
         <ReplaySection />
+        <CloseSection />
       </main>
       <GlRoot />
+      <MotionRoot />
     </>
   );
 }

@@ -5,6 +5,7 @@ import { TranscriptPanel } from "./TranscriptPanel";
 import { ContextMeter2D } from "./ContextMeter2D";
 import { ContextMeter3DShell } from "./ContextMeter3DShell";
 import { ArtifactPanel } from "./ArtifactPanel";
+import { LoopIndicator } from "./LoopIndicator";
 import { useGlStore } from "../gl/glStore";
 
 type TabId = "transcript" | "context" | "page";
@@ -40,7 +41,11 @@ export function ReplaySection() {
         </p>
 
         <div className="mt-10 flex flex-col gap-4 rounded-lg border border-[var(--color-hairline)] bg-[var(--color-panel)]/60 p-4 md:flex-row md:items-start md:gap-6 md:p-5">
-          <Controls />
+          <div className="flex items-center justify-between gap-4 md:justify-start">
+            <Controls />
+            {/* The S2 loop, live: which phase the agent is in right now. */}
+            <LoopIndicator />
+          </div>
           <Timeline />
         </div>
 

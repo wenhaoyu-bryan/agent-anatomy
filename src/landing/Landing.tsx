@@ -31,15 +31,10 @@ export function Landing() {
           <EpisodeCard
             number="1.5"
             title="Where agents go wrong"
-            blurb="Loops, overflow, and bad tool results — the failure modes."
-            status="soon"
+            blurb="Context overflow, wrong turns, dead ends — and how agents recover."
+            status="assembly"
           />
-          <EpisodeCard
-            number="02"
-            title="To be announced"
-            blurb=""
-            status="soon"
-          />
+          <EpisodeCard number="02" title="To be announced" blurb="" status="planned" />
         </section>
 
         <footer className="mt-auto pt-16">
@@ -57,23 +52,31 @@ type EpisodeCardProps = {
   title: string;
   blurb: string;
   href?: string;
-  status: "live" | "soon";
+  status: "live" | "assembly" | "planned";
 };
+
+const STATUS_META = {
+  live: { label: "Live", color: "var(--color-success)" },
+  assembly: { label: "In assembly", color: "var(--color-muted)" },
+  planned: { label: "Planned", color: "var(--color-muted)" },
+} as const;
 
 function EpisodeCard({ number, title, blurb, href, status }: EpisodeCardProps) {
   const isLive = status === "live";
+  const meta = STATUS_META[status];
   const inner = (
     <div
-      className="flex items-baseline gap-5 rounded-lg border p-5 transition-colors duration-300 md:p-6"
-      style={{
-        borderColor: "var(--color-hairline)",
-        backgroundColor: "var(--color-panel)",
-        opacity: isLive ? 1 : 0.42,
-      }}
+      className={`flex items-baseline gap-5 rounded-lg border border-[var(--color-hairline)] bg-[var(--color-panel)] p-5 transition-colors duration-300 md:p-6 ${
+        isLive ? "hover:border-[var(--color-muted)]" : ""
+      }`}
+      style={{ opacity: isLive ? 1 : 0.42 }}
     >
       <span
         className="shrink-0 text-2xl tabular-nums md:text-3xl"
-        style={{ fontFamily: "var(--font-mono)", color: isLive ? "var(--color-tool)" : "var(--color-muted)" }}
+        style={{
+          fontFamily: "var(--font-mono)",
+          color: isLive ? "var(--color-tool)" : "var(--color-muted)",
+        }}
       >
         {number}
       </span>
@@ -82,7 +85,14 @@ function EpisodeCard({ number, title, blurb, href, status }: EpisodeCardProps) {
           <h2 className="text-lg font-medium md:text-xl" style={{ fontFamily: "var(--font-display)" }}>
             {title}
           </h2>
-          <span className="micro-label">{isLive ? "Live" : "Soon"}</span>
+          <span className="micro-label flex items-center gap-1.5">
+            <span
+              aria-hidden="true"
+              className="size-1.5 rounded-full"
+              style={{ backgroundColor: meta.color }}
+            />
+            {meta.label}
+          </span>
         </div>
         {blurb && <p className="mt-1 text-[var(--color-muted)]">{blurb}</p>}
       </div>
