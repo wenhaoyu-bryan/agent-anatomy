@@ -38,6 +38,39 @@ body {
   color: var(--color-muted);
 }
 
+/* Visible focus rings everywhere (PLAN §8). */
+:focus-visible {
+  outline: 2px solid var(--color-tool);
+  outline-offset: 2px;
+}
+
+/*
+ * Replay UI motion (M2) — mechanical, interruptible, CSS-only.
+ * Transitions (not keyframes) so rapid scrubbing retargets smoothly.
+ */
+.replay-item {
+  opacity: 1;
+  transform: translateY(0);
+  transition:
+    opacity 200ms var(--ease-mechanical),
+    transform 200ms var(--ease-mechanical);
+  @starting-style {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+/* Press feedback for transport controls and tabs. */
+.pressable {
+  transition:
+    transform 140ms var(--ease-mechanical),
+    background-color 150ms ease,
+    border-color 150ms ease;
+}
+.pressable:active:not(:disabled) {
+  transform: scale(0.96);
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

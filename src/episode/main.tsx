@@ -1,10 +1,19 @@
 import { StrictMode } from "react";
-import { createRoot } from "react-dom/client";
+import { createRoot, hydrateRoot } from "react-dom/client";
 import "../styles/global.css";
 import { Episode } from "./Episode.tsx";
 
-createRoot(document.getElementById("root")!).render(
+const container = document.getElementById("root")!;
+const app = (
   <StrictMode>
     <Episode />
-  </StrictMode>,
+  </StrictMode>
 );
+
+// Production HTML is prerendered (scripts/prerender.ts) → hydrate.
+// Dev serves an empty #root → render.
+if (container.hasChildNodes()) {
+  hydrateRoot(container, app);
+} else {
+  createRoot(container).render(app);
+}

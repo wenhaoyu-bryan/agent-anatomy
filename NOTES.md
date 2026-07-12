@@ -68,6 +68,32 @@ read its SKILL.md directly and apply it manually.
 - Deploy fix: removed `version:` from pnpm/action-setup (conflicted with
   `packageManager` field → ERR_PNPM_BAD_PM_VERSION). Reads version from package.json now.
 
+## M2 — replay UI (DOM only)
+
+- Three-panel S4 (transcript / context / page) on md+, tabbed panels on
+  mobile with the timeline persistent. Replay is user-driven only — buttons,
+  a native range scrubber (free keyboard support), autoplay. Never scroll-tied.
+- zustand store (`src/episode/replay/store.ts`) bridges the headless engine
+  to React via `replay.subscribe`. Manual navigation pauses playback.
+- `ContextMeter2D` is the temporary 2D meter — after M3 it stays on as the
+  reduced-motion / no-WebGL fallback (§7), so don't delete it.
+- The fake product page is deliberately **light-mode** so "the world" reads
+  as different material from the dark telemetry instrument around it.
+- Motion (per emil-design-eng consult, within §6's mechanical spec):
+  CSS transitions only (interruptible under rapid scrubbing — no keyframes),
+  strong expo-out 140–300ms, `scale(0.96)` press feedback, `@starting-style`
+  entry for new transcript rows, tab switches near-instant (frequent action).
+- Prerender pipeline implemented (decision above): `vite build -c
+  vite.ssr.config.ts` → `scripts/prerender.ts` injects `renderToString`
+  output into dist HTML; client entries hydrate when #root has children.
+  Verified: essay copy greps in `dist/**/index.html`.
+- Verified in-browser (vite preview + Playwright): scrub to any index heals/
+  un-heals the page at the right events (image at EVT 11, price at EVT 17),
+  autoplay advances ~800ms/event and auto-pauses, pause holds, ArrowRight
+  steps the slider, mobile tabs switch panels, no hydration errors.
+- Episode page JS: ~80.6 KB gzipped total (global 60.8 + episode 19.8) —
+  well under the 450 KB budget with three.js still to come.
+
 ### Known deferrals
 - favicon.ico 404 on live (harmless console error) → add favicon at M5.
 - Font subsets currently include cyrillic/latin-ext; subset to used glyphs at M5.
