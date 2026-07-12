@@ -1,0 +1,30 @@
+/**
+ * Design tokens — "flight recorder / mission control telemetry" (PLAN §6).
+ * Deep blue-black canvas, hairline panels, telemetry category colors.
+ * Tune values here; the temperament (precise, calm, technical) is fixed.
+ */
+
+@theme {
+  /* Surfaces */
+  --color-canvas: #0b0e14;
+  --color-panel: #121826;
+  --color-hairline: #243043;
+
+  /* Text */
+  --color-ink: #e6edf3;
+  --color-muted: #8b98a9;
+
+  /* Telemetry category colors — one saturated color dominant per view */
+  --color-thinking: #ffb454; /* phosphor amber  — thinking */
+  --color-tool: #5ccfe6; /* signal cyan     — tool calls / results */
+  --color-success: #87d96c; /* soft green      — artifact healed / success */
+  --color-user: #f07178; /* magenta-coral   — user messages */
+
+  /* Type */
+  --font-display: "Space Grotesk Variable", system-ui, sans-serif;
+  --font-body: "IBM Plex Sans", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+
+  /* Motion — mechanical easing */
+  --ease-mechanical: cubic-bezier(0.16, 1, 0.3, 1); /* expo-out feel */
+}
