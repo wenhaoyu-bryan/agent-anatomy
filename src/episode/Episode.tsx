@@ -1,4 +1,7 @@
 import { ReplaySection } from "./replay/ReplaySection";
+import { ContextWindowSection } from "./sections/ContextWindowSection";
+import { GlRoot } from "./gl/GlRoot";
+import { useGlSlot } from "./gl/glStore";
 
 const HOME_URL = import.meta.env.BASE_URL;
 
@@ -17,19 +20,23 @@ export function Episode() {
       </a>
       <main id="main">
         <Hero />
+        <ContextWindowSection />
         <ReplaySection />
       </main>
+      <GlRoot />
     </>
   );
 }
 
 function Hero() {
+  const slotRef = useGlSlot("hero");
   return (
     <section className="relative flex min-h-dvh flex-col justify-center overflow-hidden px-6">
-      {/* Scene A (ambient WebGL) mounts here at M3; static grid stands in for now. */}
-      <div className="telemetry-grid pointer-events-none absolute inset-0" aria-hidden="true" />
+      {/* Scene A (ambient WebGL) tracks the hero; the grid always stays. */}
+      <div ref={slotRef} className="absolute inset-0" aria-hidden="true" />
+      <div className="telemetry-grid pointer-events-none absolute inset-0 z-[2]" aria-hidden="true" />
 
-      <div className="relative mx-auto w-full max-w-4xl">
+      <div className="relative z-10 mx-auto w-full max-w-4xl">
         <a href={HOME_URL} className="micro-label transition-colors hover:text-[var(--color-ink)]">
           ← Agent Anatomy
         </a>

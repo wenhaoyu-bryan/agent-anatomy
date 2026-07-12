@@ -3,7 +3,9 @@ import { Timeline } from "./Timeline";
 import { Controls } from "./Controls";
 import { TranscriptPanel } from "./TranscriptPanel";
 import { ContextMeter2D } from "./ContextMeter2D";
+import { ContextMeter3DShell } from "./ContextMeter3DShell";
 import { ArtifactPanel } from "./ArtifactPanel";
+import { useGlStore } from "../gl/glStore";
 
 type TabId = "transcript" | "context" | "page";
 
@@ -27,7 +29,7 @@ export function ReplaySection() {
         <p className="micro-label">The replay</p>
         <h2
           id="replay-title"
-          className="mt-3 text-3xl font-medium tracking-tight md:text-4xl"
+          className="mt-3 text-3xl font-medium tracking-tight text-balance md:text-4xl"
           style={{ fontFamily: "var(--font-display)" }}
         >
           Watch an agent fix a real page
@@ -43,7 +45,19 @@ export function ReplaySection() {
         </div>
 
         {/* Mobile tab bar (hidden on md+ where all three panels show). */}
-        <div role="tablist" aria-label="Replay panels" className="mt-4 flex gap-2 md:hidden">
+        <div
+          role="tablist"
+          aria-label="Replay panels"
+          className="mt-4 flex gap-2 md:hidden"
+          onKeyDown={(e) => {
+            if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
+            const delta = e.key === "ArrowRight" ? 1 : -1;
+            const current = TABS.findIndex((t) => t.id === tab);
+            const next = TABS[(current + delta + TABS.length) % TABS.length]!;
+            setTab(next.id);
+            document.getElementById(`tab-${next.id}`)?.focus();
+          }}
+        >
           {TABS.map((t) => (
             <button
               key={t.id}
@@ -51,6 +65,7 @@ export function ReplaySection() {
               id={`tab-${t.id}`}
               aria-selected={tab === t.id}
               aria-controls={`panel-${t.id}`}
+              tabIndex={tab === t.id ? 0 : -1}
               onClick={() => setTab(t.id)}
               className={`pressable flex-1 rounded border px-3 py-2 font-mono text-xs tracking-wide uppercase ${
                 tab === t.id
@@ -68,7 +83,7 @@ export function ReplaySection() {
             <TranscriptPanel />
           </Panel>
           <Panel id="context" title="Context window" activeTab={tab}>
-            <ContextMeter2D />
+            <ContextPanelBody />
           </Panel>
           <Panel id="page" title="The page" activeTab={tab}>
             <ArtifactPanel />
@@ -77,6 +92,12 @@ export function ReplaySection() {
       </div>
     </section>
   );
+}
+
+/** WebGL gets Scene B behind DOM numbers; everything else keeps the 2D bar. */
+function ContextPanelBody() {
+  const mode = useGlStore((s) => s.mode);
+  return mode === "webgl" ? <ContextMeter3DShell /> : <ContextMeter2D />;
 }
 
 function Panel({
