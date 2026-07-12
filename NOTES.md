@@ -42,7 +42,16 @@ one, note it here and skip.
 - Tokens live in `src/styles/tokens.css` via Tailwind v4 `@theme`.
 - Deploy: GitHub Actions build → Pages artifact on push to main.
 
-### Things to verify live at M0
-- [ ] Both routes reachable under `/agent-anatomy/`.
-- [ ] Fonts load (self-hosted, no CDN).
-- [ ] Landing → episode link works with base path.
+### Verified live at M0 (2026-07-12)
+- [x] Both routes reachable under `/agent-anatomy/` (HTTP 200, assets resolve).
+- [x] Fonts load self-hosted (Space Grotesk + IBM Plex Mono `document.fonts` = loaded).
+- [x] Landing → episode link works with base path (`/agent-anatomy/episodes/...`).
+- [x] Flight-recorder identity renders: canvas `#0B0E14`, ink `#E6EDF3`, H1 in Space Grotesk.
+- Deploy fix: removed `version:` from pnpm/action-setup (conflicted with
+  `packageManager` field → ERR_PNPM_BAD_PM_VERSION). Reads version from package.json now.
+
+### Known deferrals
+- favicon.ico 404 on live (harmless console error) → add favicon at M5.
+- Font subsets currently include cyrillic/latin-ext; subset to used glyphs at M5.
+- Playwright MCP runs in an isolated FS here — screenshots can't be handed back;
+  verifying rendering via `document.fonts` + computed styles instead.
