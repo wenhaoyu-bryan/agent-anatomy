@@ -10,28 +10,46 @@ Scratchpad for the build. Becomes material for the write-up post later.
 - **Display font: Space Grotesk (variable).** Geometric with technical
   personality, pairs cleanly with IBM Plex Mono (the telemetry voice), subsets
   well for self-hosting. Body: IBM Plex Sans. Telemetry/trace text: IBM Plex Mono.
-- **Prerendering approach (deferred to M5):** plan to use a minimal build-time
-  HTML snapshot rather than an SSR plugin — keeps the Vite setup boring; the only
-  requirement is that view-source shows the essay text. Revisit at M5.
 - **Package manager: pnpm** — matches the owner's other projects.
+
+## Prerendering decision (§8) — locked before M2
+
+**Approach: post-build HTML snapshot via a small SSR bundle + `hydrateRoot`.**
+`scripts/prerender.ts` runs after `vite build`: it builds the two page roots
+with `vite build --ssr`, calls `renderToString`, and injects the markup into
+the built `index.html` files' `#root`. Client entries switch from `createRoot`
+to `hydrateRoot`. WebGL/canvas components mount only behind a `useEffect`
+"mounted" flag, so the server render emits the DOM fallback (§7 requires that
+fallback anyway) — no R3F on the server, no hydration mismatch.
+
+- Why not an SSR framework/plugin: two static pages don't justify one; the
+  snapshot script is ~50 lines and keeps Vite boring.
+- Verify at M2 (first content-heavy milestone): grep a known essay sentence in
+  `dist/**/index.html`. Enforce as a CI check at M5.
 
 ## Design-skill workflow contract (owner's rule)
 
-Three tiers, never used simultaneously. PLAN §6 is the binding spec; where a
-skill conflicts with §6, the spec wins. Never introduce glassmorphism,
-neumorphism, aurora gradients, or off-spec trend styles — if a skill suggests
-one, note it here and skip.
+All named skills are installed as of 2026-07-12 — the earlier "not installed,
+using mapped equivalents" note is obsolete. Canonical rules live in CLAUDE.md;
+short form:
 
-1. **Direction** — consult ONLY at M0 (tokens) and M4 (narrative). Named skill
-   `frontend-design` is not installed here → using **design-consultation** to
-   sharpen §6 execution (not to propose alternatives).
-2. **Motion** — consult when writing any animation/transition. Named skills
-   `emil-design-eng` / `animation-vocabulary` are not installed → applying §6's
-   motion spec directly (mechanical expo/quart-out easing, 200–400ms UI).
-3. **Audit gate** — mandatory at end of M3 and M5. Named `review-animations` +
-   `web-design-guidelines` not installed → using **design-review** (+
-   webapp-testing for visual evidence). Produce findings, fix everything
-   severity-medium and up, log findings here, don't close the milestone until clean.
+1. **Direction** — `frontend-design`: consult ONLY at M0 (done) and M4.
+2. **Motion** — `emil-design-eng` + `animation-vocabulary` whenever writing
+   animation/transition code; `improve-animations` may be used during M3
+   iteration. §6's motion spec (mechanical expo/quart-out, 200–400ms UI)
+   wins on conflict.
+3. **Audit gate** — `review-animations` + `web-design-guidelines`, mandatory
+   at end of M3 and M5; `writing-guidelines` joins the M4 copy pass. Fix
+   everything severity-medium and up, log findings here, don't close the
+   milestone until clean.
+4. **Never invoke** in this project: `ui-ux-pro-max`, `theme-factory`,
+   `canvas-design`, `brand-guidelines`; `apple-design` is installed but stays
+   uninvoked. PLAN §6 is the binding design direction — no glassmorphism,
+   neumorphism, aurora gradients, or trend styles from any skill.
+
+Session note: `review-animations` exists on disk but didn't register in the
+07-12 session's skill list — if the Skill tool can't see it at audit time,
+read its SKILL.md directly and apply it manually.
 
 ## M0 — walking skeleton
 
