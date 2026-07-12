@@ -94,8 +94,18 @@ read its SKILL.md directly and apply it manually.
 - Episode page JS: ~80.6 KB gzipped total (global 60.8 + episode 19.8) —
   well under the 450 KB budget with three.js still to come.
 
+### Post-M2 bug pass (owner: "fix the bugs")
+- **Page-yank (bad):** `scrollIntoView` in the transcript scrolled the whole
+  document when events advanced (scrollY 0 → 853 while reading elsewhere).
+  Replaced with container-scoped scrollTop math on `[data-replay-scroll]` —
+  window stays put, panel still tracks the current event.
+- **Dead highlight fade:** Tailwind `transition-colors` on transcript rows
+  fought `.replay-item`'s transition — the later declaration won wholesale, so
+  the background snapped. Consolidated background-color into `.replay-item`.
+- **favicon** pulled forward from the M5 deferral: `public/favicon.svg`
+  (loop-gauge mark in the telemetry palette), linked from both pages.
+
 ### Known deferrals
-- favicon.ico 404 on live (harmless console error) → add favicon at M5.
 - Font subsets currently include cyrillic/latin-ext; subset to used glyphs at M5.
 - Playwright MCP runs in an isolated FS here — screenshots can't be handed back;
   verifying rendering via `document.fonts` + computed styles instead.
