@@ -1,8 +1,10 @@
+import { ReplaySection } from "./replay/ReplaySection";
+
 const HOME_URL = import.meta.env.BASE_URL;
 
 /**
- * Episode shell. M0 ships only the hero (S1) as a styled skeleton.
- * Sections S2–S5 mount here in later milestones.
+ * Episode shell. S1 hero + S4 replay so far; S2/S3/S5 and scroll
+ * orchestration arrive in M3–M4.
  */
 export function Episode() {
   return (
@@ -15,6 +17,7 @@ export function Episode() {
       </a>
       <main id="main">
         <Hero />
+        <ReplaySection />
       </main>
     </>
   );
