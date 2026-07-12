@@ -105,6 +105,50 @@ read its SKILL.md directly and apply it manually.
 - **favicon** pulled forward from the M5 deferral: `public/favicon.svg`
   (loop-gauge mark in the telemetry palette), linked from both pages.
 
+## M3 — WebGL
+
+- **One-canvas architecture:** a single fixed R3F `<Canvas>` (TrackedCanvas)
+  follows whichever registered slot (hero / S3 / S4) is most visible, per
+  §7's "one canvas instance, scenes swapped by visibility." Frameloop is
+  `never` when no slot is on screen. This also keeps the bloom composer
+  simple — exactly one scene renders at a time.
+- Scene A: 640 points, ring motif drawn as its own faint closed outline
+  (linking ring points into the neighbor web produced a tangle — fixed),
+  pulse travels the ring every ~9s and just crosses the bloom threshold.
+- Scene B: 1 token = 1 instanced particle (CAP 4096 = the trace's window),
+  deterministic settle strata via seeded PRNG, bezier flights ~0.85s with
+  HDR color spike → selective bloom via luminanceThreshold=1, instant
+  rewinds. Same component serves S3 (scroll scrub, seeded demo stream) and
+  S4 (replay events). Camera back-solves from viewport aspect so the box
+  fits narrow panels/phones.
+- gsap/ScrollTrigger dynamically imported (CJS broke the SSR prerender when
+  imported statically; also keeps it out of the initial bundle). three.js
+  chunk is lazy — episode initial JS unchanged, full page ≈ 393 KB gz
+  (budget 450).
+- Fallbacks verified via emulated reduced-motion: no canvas, no pin, static
+  S3 meter, 2D S4 meter. webglcontextlost flips mode to fallback live.
+- Perf: 61fps sampled during S3 scrub with particles in flight.
+
+### M3 audit gate (review-animations + web-design-guidelines)
+
+review-animations (applied from SKILL.md — not registered in this session):
+- Canvas slot fade was 300ms symmetric → tightened to 220ms. **Verdict:
+  approve** — all motion GPU-only (transform/opacity/canvas), interruptible
+  transitions, no ease-in, no scale(0), reduced-motion honored, Tailwind v4
+  gates hover: behind (hover:hover) by default.
+
+web-design-guidelines findings, fixed:
+- straight quotes/apostrophes in S3 copy → curly (full sweep lands with the
+  M4 writing-guidelines pass)
+- section h2s missing text-balance → added
+- mobile tablist lacked arrow-key navigation + roving tabindex → added
+- missing touch-action: manipulation on controls/slider → added
+- transcript panel scroll chained to page → overscroll-behavior: contain
+- missing <meta name="theme-color"> → added (#0B0E14)
+
+Deferred (logged, not fixed): replay index / active tab in URL params
+(consider at M5), font preload (M5 subsetting task).
+
 ### Known deferrals
 - Font subsets currently include cyrillic/latin-ext; subset to used glyphs at M5.
 - Playwright MCP runs in an isolated FS here — screenshots can't be handed back;

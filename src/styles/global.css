@@ -63,10 +63,20 @@ body {
 
 /* Press feedback for transport controls and tabs. */
 .pressable {
+  touch-action: manipulation;
   transition:
     transform 140ms var(--ease-mechanical),
     background-color 150ms ease,
     border-color 150ms ease;
+}
+
+/* Panel-internal scrolling must not chain to the page. */
+[data-replay-scroll] {
+  overscroll-behavior: contain;
+}
+
+input[type="range"] {
+  touch-action: manipulation;
 }
 .pressable:active:not(:disabled) {
   transform: scale(0.96);
