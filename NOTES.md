@@ -149,6 +149,29 @@ web-design-guidelines findings, fixed:
 Deferred (logged, not fixed): replay index / active tab in URL params
 (consider at M5), font preload (M5 subsetting task).
 
+## M4 — narrative
+
+- S2 "The Loop": one SVG holding both models; a GSAP scrubbed timeline draws
+  the naive PROMPT→ANSWER arrow, dims it to 12%, then draws the ring and
+  pops the THINK/ACT/OBSERVE nodes in sequence. No pin — scrubbed across the
+  section's viewport pass (start 62% / end 38%), so mobile scrolls naturally.
+  Fallback/SSR renders the finished loop statically.
+- The loop motif returns in S4 as `LoopIndicator` — a live mini-ring beside
+  the transport controls showing the agent's current phase (thinking→THINK,
+  tool_call→ACT, tool_result→OBSERVE, aria-live).
+- S5 "Debrief": three takeaway cards numbered in category colors, dashed
+  episode-1.5 slot, open-source invitation with repo + trace-spec buttons.
+- Scroll orchestration: Lenis (dynamic import, disabled under reduced
+  motion per §8) bridged to ScrollTrigger via gsap.ticker; `.reveal` section
+  entries are progressive-enhancement safe — server HTML ships visible, the
+  `js-motion` class arms the hidden state on capable clients only.
+- Landing upgraded to the S5 vocabulary: status dots (Live green / In
+  assembly / Planned), hover border on the live card.
+- writing-guidelines pass: copy conforms (active voice, no filler,
+  sentence-case headings, curly quotes). Two deliberate exceptions: the S3
+  rhetorical foreshadow is PLAN-verbatim, and em dashes stay — house voice,
+  not banned by the binding spec.
+
 ### Known deferrals
 - Font subsets currently include cyrillic/latin-ext; subset to used glyphs at M5.
 - Playwright MCP runs in an isolated FS here — screenshots can't be handed back;

@@ -70,6 +70,22 @@ body {
     border-color 150ms ease;
 }
 
+/*
+ * Section-entry reveals (M4). Server HTML is fully visible; .js-motion
+ * (added on capable clients only) arms the hidden state, IO adds .is-in.
+ */
+.js-motion .reveal {
+  opacity: 0;
+  transform: translateY(12px);
+  transition:
+    opacity 500ms var(--ease-mechanical),
+    transform 500ms var(--ease-mechanical);
+}
+.js-motion .reveal.is-in {
+  opacity: 1;
+  transform: none;
+}
+
 /* Panel-internal scrolling must not chain to the page. */
 [data-replay-scroll] {
   overscroll-behavior: contain;
