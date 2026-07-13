@@ -172,6 +172,50 @@ Deferred (logged, not fixed): replay index / active tab in URL params
   rhetorical foreshadow is PLAN-verbatim, and em dashes stay — house voice,
   not banned by the binding spec.
 
+## M5 — polish & ship
+
+- **Lighthouse vs §1 budgets** (local `vite preview`, headless Chrome):
+  episode desktop Perf 100 / A11y 100; episode mobile Perf 93 / A11y 100;
+  landing desktop 100/100. Budgets were Perf ≥85 mobile / ≥95 desktop,
+  A11y ≥95 — all met.
+  - Got there in two moves: canvas mount deferred to `requestIdleCallback`
+    (desktop TBT 430ms → 0ms), then gsap/lenis imports gated behind the same
+    `whenIdle()` helper (mobile TBT 360→230ms, mobile 81→93).
+  - One a11y contrast fix: broken-image caption in the fake product page
+    #8a93a3 → #5d6675 (3.09:1 → passes on white).
+- **Fonts**: latin-only imports; cyrillic/vietnamese Plex files no longer in
+  dist. Space Grotesk's latin-ext/vietnamese remain declared (unicode-range
+  means browsers never fetch them) — acceptable.
+- **OG images**: composed as token-styled HTML cards (headline + particle
+  strata) and screenshotted to `public/og/*.png` (1200×630); full og/twitter
+  meta + canonical on both pages.
+- **llms.txt** at site root (GEO); README rewritten around the replay GIF
+  (41 frames captured event-by-event via Playwright → ffmpeg, 1.0 MB);
+  `docs/launch.md` written (X thread, Show HN, portfolio blurb, clip recipe).
+- **CI** now greps the prerendered essay text in dist (the §8 view-source
+  requirement is enforced, as decided pre-M2).
+- **Reduced-motion final pass** (emulated): no canvas, no pin, no reveal
+  arming, static loop diagram + static meter, every section heading visible.
+
+### M5 audit gate (review-animations + web-design-guidelines)
+
+- review-animations: the only motion-adjacent M5 change is the idle-deferred
+  canvas mount, which reuses the existing 220ms fade — no new animations,
+  no findings. **Approve.**
+- web-design-guidelines: OG/meta complete with image dimensions + canonical;
+  no new interactive elements; contrast finding fixed (a11y 100 both pages);
+  pages have no `<img>` elements (inline SVG only). **Pass.**
+- Still consciously deferred: replay index / active tab in URL params —
+  history-API complexity outweighs value for an essay page; revisit if
+  people start sharing mid-replay states.
+
+### Manual QA left for the owner (can't be tested from this machine)
+- Safari (macOS + iOS): Lenis feel, bloom rendering, pinned S3. Code-level
+  mitigations already in: requestIdleCallback feature-checked, WebGL2
+  required with 2D fallback, @starting-style/text-balance degrade silently.
+- The 15-second share clip: record per docs/launch.md (S3 scrub → S4 play
+  to the image-heal at EVT 11).
+
 ### Known deferrals
 - Font subsets currently include cyrillic/latin-ext; subset to used glyphs at M5.
 - Playwright MCP runs in an isolated FS here — screenshots can't be handed back;

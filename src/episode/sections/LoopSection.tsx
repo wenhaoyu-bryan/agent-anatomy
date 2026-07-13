@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { whenIdle } from "../../lib/idle";
 import { useGlStore } from "../gl/glStore";
 
 /**
@@ -16,7 +17,9 @@ export function LoopSection() {
     if (mode !== "webgl" || !sectionRef.current || !svgRef.current) return;
     let cancelled = false;
     let cleanup: (() => void) | undefined;
-    void Promise.all([import("gsap"), import("gsap/ScrollTrigger")]).then(
+    void whenIdle()
+      .then(() => Promise.all([import("gsap"), import("gsap/ScrollTrigger")]))
+      .then(
       ([{ gsap }, { ScrollTrigger }]) => {
         if (cancelled || !sectionRef.current) return;
         gsap.registerPlugin(ScrollTrigger);

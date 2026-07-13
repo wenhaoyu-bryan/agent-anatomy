@@ -1,12 +1,16 @@
 @import "tailwindcss";
 @import "./tokens.css";
 
-/* Self-hosted fonts (no external CDN — PLAN §3). */
-@import "@fontsource-variable/space-grotesk";
-@import "@fontsource/ibm-plex-sans/400.css";
-@import "@fontsource/ibm-plex-sans/500.css";
-@import "@fontsource/ibm-plex-mono/400.css";
-@import "@fontsource/ibm-plex-mono/500.css";
+/*
+ * Self-hosted fonts (no external CDN — PLAN §3), latin subsets only.
+ * All copy is English; unicode-range keeps browsers from fetching more,
+ * but latin-only imports also keep the extra files out of dist.
+ */
+@import "@fontsource-variable/space-grotesk/wght.css";
+@import "@fontsource/ibm-plex-sans/latin-400.css";
+@import "@fontsource/ibm-plex-sans/latin-500.css";
+@import "@fontsource/ibm-plex-mono/latin-400.css";
+@import "@fontsource/ibm-plex-mono/latin-500.css";
 
 html {
   background-color: var(--color-canvas);

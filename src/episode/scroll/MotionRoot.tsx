@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { whenIdle } from "../../lib/idle";
 
 /**
  * Page-level motion plumbing (M4): Lenis smooth scroll bridged to
@@ -16,8 +17,9 @@ export function MotionRoot() {
 
     let cancelled = false;
     let cleanupLenis: (() => void) | undefined;
-    void Promise.all([import("lenis"), import("gsap"), import("gsap/ScrollTrigger")]).then(
-      ([{ default: Lenis }, { gsap }, { ScrollTrigger }]) => {
+    void whenIdle()
+      .then(() => Promise.all([import("lenis"), import("gsap"), import("gsap/ScrollTrigger")]))
+      .then(([{ default: Lenis }, { gsap }, { ScrollTrigger }]) => {
         if (cancelled) return;
         gsap.registerPlugin(ScrollTrigger);
         const lenis = new Lenis({ lerp: 0.12 });

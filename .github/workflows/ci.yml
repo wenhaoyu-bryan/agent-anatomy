@@ -21,3 +21,6 @@ jobs:
       # The checked-in JSON Schema must match the zod source of truth.
       - run: pnpm schema:build && git diff --exit-code docs/trace.schema.json
       - run: pnpm build
+      # Prerender must ship the essay text (view-source requirement, PLAN §8).
+      - run: grep -q "What happens when you give an AI a task" dist/episodes/how-an-agent-works/index.html
+      - run: grep -q "Interactive explainers" dist/index.html
