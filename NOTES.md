@@ -277,3 +277,51 @@ The three traces are screenplays (8–14 events each, per brief):
 Verified: `pnpm test` 31 passing, `pnpm trace:validate` all 5 green,
 `schema:build` diff clean, full `pnpm build` green. Demo = read the three
 traces as text.
+
+### T2 — page + vignettes (this milestone)
+
+Episode 1.5 page (`episodes/where-agents-go-wrong/`) with hero, 30-second
+recap, F1/F2/F3 vignettes, and close. F1/F3 are full replays; F2 uses the
+temporary 2D meter (the WebGL eviction scene is T3).
+
+Key decision — **per-trace replay stores via React context, singleton left
+intact.** The whole S4 rig was bound to one global `useReplayStore` singleton,
+and `ContextScene` (WebGL) reads that singleton with `.getState()` inside
+`useFrame` — outside React. Rather than risk Ep 01's GL path, I kept the
+singleton and layered context on top:
+
+- `makeReplayStore(trace)` builds an independent store; the Ep-01 singleton is
+  now just `makeReplayStore(episodeTrace)`.
+- `ReplayProvider` + `useReplay(selector)` (context, default = the singleton).
+  The six DOM replay components read via `useReplay`; with no provider they get
+  the singleton, so **Episode 01 is behaviorally unchanged** (verified live:
+  three-panel rig + particle scene intact).
+- `ContextScene` still imports the singleton and calls `.getState()` —
+  untouched. Each Episode 1.5 vignette wraps its own `ReplayProvider`, so their
+  playheads are independent.
+
+Transcript is now eviction/annotation-aware without touching the tested engine:
+it renders `events.slice(0, index+1)` (identical to `contextItems` when nothing
+is evicted), dims events an eviction has dropped, renders the `context_evicted`
+marker as a dashed −tokens row, and shows any `annotation` as a small amber
+margin note. `ContextMeter2D` gained an eviction footer ("N items left the
+window · −tokens"); its stacked bar shrinks naturally because `contextItems`
+drops the evicted events. `replay.ts` and `schema.ts` were NOT changed — T1's
+tested contract stands.
+
+renderIds built: `banner-summer` (F1 stuck banner), `form-broken/-wired/-works`
+(F3 heal) in `src/episode15/ArtifactView.tsx`. F2 needs no page panel (the meter
+is the show), so `checkout-code` has no renderer — dropped from the T2 list.
+
+Wiring: `vite.config.ts` input + `entry-server.renderEpisode15` + `prerender.ts`
+injection + a body-only CI grep ("Two ideas carry this episode", chosen over a
+title that also appears in `og:title`).
+
+Deferred to T3/T4 per brief: F2 particle overflow + eviction scene and pinned
+scroll (T3); landing card flip to LIVE + Ep 01 S3 foreshadow link, OG image,
+writing-guidelines + audit gate, budgets re-measure, README/launch (T4).
+
+Verified live (Playwright, dev server): F1 loop rhyme + climbing meter +
+annotations, F2 eviction (EVICT −1408 row, meter shrinks 4042→2778), F3 form
+heal + thesis reply, Ep 01 replay + WebGL scene unregressed. `pnpm build` green,
+31 tests, schema diff clean.

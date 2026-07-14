@@ -1,4 +1,4 @@
-import { useReplayStore } from "./store";
+import { useReplay } from "./store";
 import { useGlSlot } from "../gl/glStore";
 import { EVENT_META } from "./eventMeta";
 
@@ -15,8 +15,8 @@ const LEGEND = [
  * renders Scene B in the empty middle.
  */
 export function ContextMeter3DShell() {
-  const frame = useReplayStore((s) => s.frame);
-  const windowTokens = useReplayStore((s) => s.windowTokens);
+  const frame = useReplay((s) => s.frame);
+  const windowTokens = useReplay((s) => s.windowTokens);
   const slotRef = useGlSlot("s4");
 
   const pct = Math.min(100, (frame.tokensUsed / windowTokens) * 100);

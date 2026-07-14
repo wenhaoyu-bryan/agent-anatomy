@@ -13,6 +13,7 @@ export default defineConfig({
       input: {
         landing: resolve(__dirname, "index.html"),
         episode: resolve(__dirname, "episodes/how-an-agent-works/index.html"),
+        episode15: resolve(__dirname, "episodes/where-agents-go-wrong/index.html"),
       },
     },
   },

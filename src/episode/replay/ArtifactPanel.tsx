@@ -1,9 +1,9 @@
-import { useReplayStore } from "./store";
+import { useReplay } from "./store";
 import { ProductPage } from "./ProductPage";
 
 /** "THE PAGE" — the world the agent acts on, in a minimal browser frame. */
 export function ArtifactPanel() {
-  const artifact = useReplayStore((s) => s.frame.artifact);
+  const artifact = useReplay((s) => s.frame.artifact);
 
   return (
     <div className="flex flex-col gap-3 p-4">
