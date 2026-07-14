@@ -11,6 +11,7 @@ export const EVENT_META: Record<TraceEvent["type"], { label: string; color: stri
   tool_call: { label: "CALL", color: "var(--color-tool)" },
   tool_result: { label: "RESULT", color: "var(--color-tool)" },
   assistant_message: { label: "REPLY", color: "var(--color-success)" },
+  context_evicted: { label: "EVICT", color: "var(--color-muted)" },
 };
 
 export function eventBody(event: TraceEvent): string {
@@ -25,6 +26,10 @@ export function eventBody(event: TraceEvent): string {
       return `${event.tool}(${formatInput(event.input)})`;
     case "tool_result":
       return event.output;
+    case "context_evicted": {
+      const n = event.evictedEventIds.length;
+      return `Dropped ${n} earlier ${n === 1 ? "item" : "items"} from the window to free space.`;
+    }
   }
 }
 

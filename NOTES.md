@@ -220,3 +220,60 @@ Deferred (logged, not fixed): replay index / active tab in URL params
 - Font subsets currently include cyrillic/latin-ext; subset to used glyphs at M5.
 - Playwright MCP runs in an isolated FS here — screenshots can't be handed back;
   verifying rendering via `document.fonts` + computed styles instead.
+
+## Episode 1.5 — "Where agents go wrong" (fast-follow; brief: episodes/EPISODE-1.5-BRIEF.md)
+
+Milestones T1–T4 (smaller than Ep 01 — pipeline exists). Branch per milestone,
+PR each, same as Ep 01.
+
+### T1 — traces + schema (this milestone)
+
+Schema bumped to **1.1**, backward compatible (1.0 traces validate/render
+unchanged; the reject tests prove it). Two additions, both optional:
+
+- **`context_evicted` event** `{ evictedEventIds: string[], tokens }` — the
+  window dropping its oldest items when it fills. Design call: `tokens` is the
+  amount **reclaimed**, and the engine *subtracts* it (the marker is not itself
+  window content). Chose this over a no-op cost + separate field so there's one
+  number, and made the schema enforce `tokens === Σ(evicted events' tokens)` so
+  the file can never drift from what the engine derives.
+- **`annotation?`** on any event — authorial margin note ("same result, a second
+  time"). Added to `eventBase`, so every type gets it.
+
+- **Validation now folds like the engine** (`+tokens` per event, `−tokens` per
+  eviction) and asserts `0 ≤ running ≤ window` at *every* step — replaced the
+  old "naive sum ≤ window" check, which couldn't express overflow-then-evict.
+  Same fold in `validate-traces.ts` (reports `peak/window`, not a misleading
+  sum). Also: version stays honest — 1.1-only features are rejected in a trace
+  still declared `1.0`.
+- **Engine** (`replay.ts`): frame fold rebuilds a fresh live-window array each
+  step; eviction filters out named ids and subtracts. 1.0 traces are unaffected
+  (`live === events.slice(0, i+1)`), so no behavioural change to Ep 01.
+- Touched three exhaustive `event.type` sites so `tsc -b` stays green:
+  `eventMeta.ts` (EVENT_META `EVICT` + `eventBody`), `palette.ts` (category →
+  `system`). `LoopIndicator.phaseOf` already had a default. **The real visual
+  treatment of eviction — the transcript margin note and the F2 particle
+  fade-out/evict — is T2/T3, not done here.**
+
+The three traces are screenplays (8–14 events each, per brief):
+- `the-loop-trap` (F1, 14 ev) — edits land in source, page served from a stale
+  build; two full edit→render cycles show no change, ends mid-loop on a
+  trailing thought (no rescue — the discomfort is the lesson). renderId stays
+  `banner-summer` throughout (nothing heals).
+- `context-overflow` (F2, 14 ev) — reads four large files to **peak 4042/4096**,
+  then one `context_evicted` drops e01–e05 (incl. the user request e02),
+  reclaiming 1408; agent then answers a mis-scoped question. This is the
+  episode's share-clip scene. renderIds: `checkout-code` (static).
+- `bad-observation-recovery` (F3, 14 ev) — a stale cached "200 OK" almost fools
+  it; it verifies against the real file, finds the empty `action` + non-submit
+  button, fixes both, fresh-renders. The only happy ending; closing
+  `assistant_message` carries the thesis (verify before you trust) in PM voice,
+  without the word "harness". renderIds heal `form-broken → form-wired →
+  form-works`.
+
+**renderIds to build in T2** (ProductPage-style component switch, per §4.2):
+`banner-summer`; `checkout-code`; `form-broken`, `form-wired`, `form-works`.
+
+Verified: `pnpm test` 31 passing, `pnpm trace:validate` all 5 green,
+`schema:build` diff clean, full `pnpm build` green. Demo = read the three
+traces as text.

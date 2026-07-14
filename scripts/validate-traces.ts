@@ -17,10 +17,17 @@ for (const file of files) {
   const raw: unknown = JSON.parse(readFileSync(join(DIR, file), "utf8"));
   const result = traceSchema.safeParse(raw);
   if (result.success) {
-    const total = result.data.events.reduce((sum, event) => sum + event.tokens, 0);
+    // Peak live usage, folding the same way the engine does: +tokens per event,
+    // −tokens per eviction. This is the number that must fit the window.
+    let running = 0;
+    let peak = 0;
+    for (const event of result.data.events) {
+      running += event.type === "context_evicted" ? -event.tokens : event.tokens;
+      peak = Math.max(peak, running);
+    }
     console.log(
       `✓ ${file} — ${result.data.events.length} events, ` +
-        `${total}/${result.data.meta.contextWindowTokens} tokens`,
+        `peak ${peak}/${result.data.meta.contextWindowTokens} tokens`,
     );
   } else {
     failed = true;
