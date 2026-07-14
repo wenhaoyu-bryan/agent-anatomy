@@ -89,3 +89,12 @@ export function ReplayProvider({ trace, children }: { trace: Trace; children: Re
 export function useReplay<T>(selector: (state: ReplayStore) => T): T {
   return useStore(useContext(ReplayStoreContext), selector);
 }
+
+/**
+ * The raw store API for the nearest provider. Lets an R3F scene read the frame
+ * via getState() inside useFrame — the store crosses the Canvas reconciler
+ * boundary as a value, so no React context bridging is needed.
+ */
+export function useReplayApi(): StoreApi<ReplayStore> {
+  return useContext(ReplayStoreContext);
+}

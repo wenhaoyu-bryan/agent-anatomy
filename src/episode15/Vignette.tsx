@@ -7,8 +7,12 @@ import { LoopIndicator } from "../episode/replay/LoopIndicator";
 import { TranscriptPanel } from "../episode/replay/TranscriptPanel";
 import { ContextMeter2D } from "../episode/replay/ContextMeter2D";
 import { ArtifactView } from "./ArtifactView";
+import { F2ContextPanel } from "./F2ContextPanel";
 
-export type PanelSpec = { type: "meter" } | { type: "page"; url: string };
+export type PanelSpec =
+  | { type: "meter" }
+  | { type: "eviction" }
+  | { type: "page"; url: string };
 
 interface VignetteProps {
   id: string;
@@ -55,17 +59,27 @@ export function Vignette({ id, eyebrow, title, lede, trace, panels }: VignettePr
               <TranscriptPanel />
             </PanelShell>
             <div className="flex flex-col gap-4">
-              {panels.map((panel, i) =>
-                panel.type === "meter" ? (
-                  <PanelShell key={i} title="Context window">
-                    <ContextMeter2D />
-                  </PanelShell>
-                ) : (
+              {panels.map((panel, i) => {
+                if (panel.type === "meter") {
+                  return (
+                    <PanelShell key={i} title="Context window">
+                      <ContextMeter2D />
+                    </PanelShell>
+                  );
+                }
+                if (panel.type === "eviction") {
+                  return (
+                    <PanelShell key={i} title="Context window">
+                      <F2ContextPanel />
+                    </PanelShell>
+                  );
+                }
+                return (
                   <PanelShell key={i} title="The page">
                     <ArtifactView url={panel.url} />
                   </PanelShell>
-                ),
-              )}
+                );
+              })}
             </div>
           </div>
         </div>

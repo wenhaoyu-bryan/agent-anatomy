@@ -325,3 +325,52 @@ Verified live (Playwright, dev server): F1 loop rhyme + climbing meter +
 annotations, F2 eviction (EVICT −1408 row, meter shrinks 4042→2778), F3 form
 heal + thesis reply, Ep 01 replay + WebGL scene unregressed. `pnpm build` green,
 31 tests, schema diff clean.
+
+### T3 — the eviction scene (this milestone)
+
+F2's context panel is now a WebGL particle scene (`src/episode15/EvictionCanvas.tsx`),
+the episode's centerpiece / 15-second clip. It fills to the brim as the agent
+reads files, then at the `context_evicted` event the oldest particles — the
+original request and first reads — sink and fade out the bottom while the
+survivors drop to fill the drained space; the post-eviction thinking + reply
+land on top as a colored band. Driven by F2's replay (transport + autoplay).
+
+Architecture:
+- A dedicated in-flow `<Canvas>` in the F2 panel, NOT Ep 01's tracked-overlay
+  slot machinery — F2's scene lives in its panel and never follows scroll, so a
+  normal canvas is far simpler and leaves Ep 01's GL untouched.
+- The scene reads F2's per-vignette store via `useReplayApi()` (new) passed as a
+  prop into the Canvas, then `storeApi.getState()` inside `useFrame` — same
+  cross-reconciler trick ContextScene uses with the singleton, so no React
+  context bridging across the Canvas boundary.
+- `F2ContextPanel` keeps the DOM token numbers (§7) and mounts the canvas after
+  idle + a WebGL check; reduced-motion / no-WebGL falls back to the T2 2D meter
+  (whose bar already shrinks at the eviction), so the lesson survives with no
+  canvas. SSR renders the fallback.
+
+Particle model (`buildModel`): one token = one particle, tagged with color +
+evicted flag + arrival frame. Deterministic seeded strata (bottom-up). Assumes
+the evicted events are the oldest contiguous block (true for F2), so survivors
+sink by a single drained height instead of reflowing. Buffer sized to the
+trace's total tokens (F2 = 4186).
+
+Motion (per §6 mechanical feel; motion-tier skills not invoked — noted for the
+T4 audit): fill = staggered fade/rise-in with an HDR arrival glow → bloom;
+eviction eases in over 2.2s, `tau` driven by cursor≥evictFrame. **Rewind snaps
+tau instantly** (like ContextScene's instant fill-rewind) so scrubbing back
+never replays 1,408 flares and blows out bloom. Evicted particles glow via
+`1 + 1.4·sin(local·π)` — exactly 1.0 at rest so nothing flares before eviction
+starts (an earlier `1.45+…(1−local)` blazed at the brim — fixed).
+
+Deviation flagged: the brief calls F2 "a pinned scroll section like Ep 01's
+S3." I kept it replay-driven (transport + autoplay) instead of scroll-scrubbed,
+because the 15-second clip needs deterministic autoplay and the replay already
+computes correct eviction frames; a pinned scroll-scrub can't easily produce a
+loopable recording. Easy to add S3-style pinning if the owner wants the literal
+treatment.
+
+Verified live (Playwright): clean brim (98.7%, colored oldest-context band at
+the floor), forward eviction (level drains, oldest band dissolves), settled
+(67.8%, post-eviction reply as a band on top), 0 console errors, Ep 01
+unaffected. T3 is the visual-iteration milestone — expect tuning rounds on
+drama/color/particle density.

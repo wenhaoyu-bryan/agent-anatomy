@@ -43,7 +43,7 @@ export function Episode15() {
           title="It reads until it forgets why"
           lede="Investigating a slow checkout, the agent reads file after file until the window is full. To keep going, the oldest context falls out the bottom — including the original request. Watch the meter shrink at the eviction, then watch the agent confidently answer a question no one asked."
           trace={contextOverflow}
-          panels={[{ type: "meter" }]}
+          panels={[{ type: "eviction" }]}
         />
         <Vignette
           id="bad-observation"
