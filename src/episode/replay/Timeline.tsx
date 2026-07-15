@@ -1,4 +1,4 @@
-import { episodeTrace, useReplayStore } from "./store";
+import { useReplay } from "./store";
 import { EVENT_META } from "./eventMeta";
 
 /**
@@ -7,9 +7,10 @@ import { EVENT_META } from "./eventMeta";
  * are a purely visual telemetry strip.
  */
 export function Timeline() {
-  const frame = useReplayStore((s) => s.frame);
-  const length = useReplayStore((s) => s.length);
-  const seek = useReplayStore((s) => s.seek);
+  const events = useReplay((s) => s.trace.events);
+  const frame = useReplay((s) => s.frame);
+  const length = useReplay((s) => s.length);
+  const seek = useReplay((s) => s.seek);
 
   const position = frame.index < 0 ? "--" : String(frame.index + 1).padStart(2, "0");
   const valueText =
@@ -21,7 +22,7 @@ export function Timeline() {
     <div className="min-w-0 flex-1">
       <div aria-hidden="true" className="relative mx-[2px] flex items-center justify-between">
         <span className="absolute inset-x-0 top-1/2 h-px bg-[var(--color-hairline)]" />
-        {episodeTrace.events.map((event, i) => (
+        {events.map((event, i) => (
           <span
             key={event.id}
             className="relative size-[7px] rounded-full border transition-colors duration-200"

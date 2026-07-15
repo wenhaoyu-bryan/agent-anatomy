@@ -1,0 +1,132 @@
+{
+  "version": "1.1",
+  "meta": {
+    "id": "the-loop-trap",
+    "title": "The loop trap",
+    "description": "An agent is asked to change a banner. Its edits land in the source file, but the page is served from a stale build — so nothing it does shows up. It tries the same fix, harder, again and again. The trace ends mid-loop, with no rescue. Token counts are hand-tuned estimates.",
+    "contextWindowTokens": 8000
+  },
+  "tools": [
+    {
+      "name": "read_file",
+      "description": "Open a file and see exactly what's inside."
+    },
+    {
+      "name": "edit_file",
+      "description": "Replace a piece of text in a file with new text."
+    },
+    {
+      "name": "render_page",
+      "description": "Rebuild the page and look at the result."
+    }
+  ],
+  "initialArtifact": {
+    "kind": "webpage",
+    "files": {
+      "home.html": "<header>\n  <h1 class=\"banner\">Summer sale — 20% off</h1>\n</header>"
+    },
+    "renderId": "banner-summer"
+  },
+  "events": [
+    {
+      "id": "e01",
+      "type": "system_prompt",
+      "summary": "You are a coding agent. You can read files, edit files, and re-render the page.",
+      "tokens": 380
+    },
+    {
+      "id": "e02",
+      "type": "user_message",
+      "text": "The banner still says \"Summer sale\". The sale is over — it needs to say \"Autumn sale\". Can you change it?",
+      "tokens": 30
+    },
+    {
+      "id": "e03",
+      "type": "tool_call",
+      "tool": "read_file",
+      "input": { "path": "home.html" },
+      "tokens": 14
+    },
+    {
+      "id": "e04",
+      "type": "tool_result",
+      "tool": "read_file",
+      "output": "<header>\n  <h1 class=\"banner\">Summer sale — 20% off</h1>\n</header>",
+      "tokens": 60
+    },
+    {
+      "id": "e05",
+      "type": "tool_call",
+      "tool": "edit_file",
+      "input": { "path": "home.html", "find": "Summer sale", "replace": "Autumn sale" },
+      "tokens": 28
+    },
+    {
+      "id": "e06",
+      "type": "tool_result",
+      "tool": "edit_file",
+      "output": "Replaced 1 occurrence in home.html.",
+      "tokens": 16
+    },
+    {
+      "id": "e07",
+      "type": "tool_call",
+      "tool": "render_page",
+      "input": {},
+      "tokens": 9
+    },
+    {
+      "id": "e08",
+      "type": "tool_result",
+      "tool": "render_page",
+      "output": "Page rendered. Banner reads: \"Summer sale — 20% off\".",
+      "tokens": 24,
+      "annotation": "No change — same as before the edit."
+    },
+    {
+      "id": "e09",
+      "type": "thinking",
+      "text": "That's odd — the edit reported success, but the page still says Summer. Maybe it didn't actually save. I'll be more thorough and replace the whole heading line this time, then render again.",
+      "tokens": 52
+    },
+    {
+      "id": "e10",
+      "type": "tool_call",
+      "tool": "edit_file",
+      "input": {
+        "path": "home.html",
+        "find": "<h1 class=\"banner\">Summer sale — 20% off</h1>",
+        "replace": "<h1 class=\"banner\">Autumn sale — 20% off</h1>"
+      },
+      "tokens": 40
+    },
+    {
+      "id": "e11",
+      "type": "tool_result",
+      "tool": "edit_file",
+      "output": "Replaced 1 occurrence in home.html.",
+      "tokens": 16
+    },
+    {
+      "id": "e12",
+      "type": "tool_call",
+      "tool": "render_page",
+      "input": {},
+      "tokens": 9
+    },
+    {
+      "id": "e13",
+      "type": "tool_result",
+      "tool": "render_page",
+      "output": "Page rendered. Banner reads: \"Summer sale — 20% off\".",
+      "tokens": 24,
+      "annotation": "Same result, a second time."
+    },
+    {
+      "id": "e14",
+      "type": "thinking",
+      "text": "Still Summer. The edit clearly isn't reaching the page. I'll try once more — reopen home.html, change the banner, and render again…",
+      "tokens": 46
+    }
+  ]
+}

@@ -95,6 +95,20 @@ body {
   overscroll-behavior: contain;
 }
 
+/* Episode 1.5 recap: the context bar breathes toward its limit. Under
+ * reduced motion the global rule below freezes it at a filled state. */
+@keyframes recap-fill {
+  from {
+    width: 10%;
+  }
+  to {
+    width: 86%;
+  }
+}
+.recap-fill {
+  animation: recap-fill 3.4s var(--ease-mechanical) infinite alternate;
+}
+
 input[type="range"] {
   touch-action: manipulation;
 }

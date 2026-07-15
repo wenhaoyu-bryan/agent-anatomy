@@ -1,4 +1,4 @@
-import { useReplayStore } from "./store";
+import { useReplay } from "./store";
 
 type LoopPhase = "think" | "act" | "observe" | "idle";
 
@@ -37,7 +37,7 @@ function phaseOf(type: string | undefined): LoopPhase {
  * (PLAN §5 S2 — the page's recurring visual signature).
  */
 export function LoopIndicator() {
-  const event = useReplayStore((s) => s.frame.event);
+  const event = useReplay((s) => s.frame.event);
   const phase = phaseOf(event?.type);
   const meta = PHASE_META[phase];
 

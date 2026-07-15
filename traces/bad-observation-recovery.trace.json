@@ -1,0 +1,144 @@
+{
+  "version": "1.1",
+  "meta": {
+    "id": "bad-observation-recovery",
+    "title": "A bad observation, caught",
+    "description": "A stale cached check tells the agent a broken contact form works fine. It almost believes it — then verifies against the real file, finds the actual bug, fixes it, and confirms with a fresh render. The one failure trace with a happy ending. Token counts are hand-tuned estimates.",
+    "contextWindowTokens": 6000
+  },
+  "tools": [
+    {
+      "name": "read_file",
+      "description": "Open a file and see exactly what's inside."
+    },
+    {
+      "name": "edit_file",
+      "description": "Replace a piece of text in a file with new text."
+    },
+    {
+      "name": "render_page",
+      "description": "Rebuild the page and look at the result."
+    }
+  ],
+  "initialArtifact": {
+    "kind": "webpage",
+    "files": {
+      "contact.html": "<form action=\"\">\n  <input name=\"email\" placeholder=\"Your email\">\n  <textarea name=\"message\"></textarea>\n  <button>Send message</button>\n</form>"
+    },
+    "renderId": "form-broken"
+  },
+  "events": [
+    {
+      "id": "e01",
+      "type": "system_prompt",
+      "summary": "You are a coding agent. You can read files, edit files, and re-render the page.",
+      "tokens": 400
+    },
+    {
+      "id": "e02",
+      "type": "user_message",
+      "text": "My contact form doesn't send anything when people click Send. Can you fix it?",
+      "tokens": 34
+    },
+    {
+      "id": "e03",
+      "type": "thinking",
+      "text": "First reproduce it — render the page and submit the form the way a visitor would, so I can see the failure myself.",
+      "tokens": 40
+    },
+    {
+      "id": "e04",
+      "type": "tool_call",
+      "tool": "render_page",
+      "input": { "action": "submit the contact form" },
+      "tokens": 16
+    },
+    {
+      "id": "e05",
+      "type": "tool_result",
+      "tool": "render_page",
+      "output": "Cached render: form submitted successfully (200 OK).",
+      "tokens": 40,
+      "annotation": "Served from cache — this result may be stale."
+    },
+    {
+      "id": "e06",
+      "type": "thinking",
+      "text": "This says the form works — but the whole report is that it doesn't, and the result came from a cache. A cached success is exactly the kind of observation I shouldn't trust for a bug about live behavior. Before I call this fixed, I'll read the actual form in the file.",
+      "tokens": 74,
+      "annotation": "The recovery point — verify the observation instead of trusting it."
+    },
+    {
+      "id": "e07",
+      "type": "tool_call",
+      "tool": "read_file",
+      "input": { "path": "contact.html" },
+      "tokens": 14
+    },
+    {
+      "id": "e08",
+      "type": "tool_result",
+      "tool": "read_file",
+      "output": "<form action=\"\">\n  <input name=\"email\" placeholder=\"Your email\">\n  <textarea name=\"message\"></textarea>\n  <button>Send message</button>\n</form>",
+      "tokens": 90
+    },
+    {
+      "id": "e09",
+      "type": "thinking",
+      "text": "There's the real bug, and the cache was hiding it. The form's action is empty, so it posts nowhere, and the button has no type, so it doesn't submit at all. Two small changes fix both: point the action at the endpoint and make the button a submit button.",
+      "tokens": 78
+    },
+    {
+      "id": "e10",
+      "type": "tool_call",
+      "tool": "edit_file",
+      "input": {
+        "path": "contact.html",
+        "find": "<form action=\"\">\n  <input name=\"email\" placeholder=\"Your email\">\n  <textarea name=\"message\"></textarea>\n  <button>Send message</button>\n</form>",
+        "replace": "<form action=\"/api/contact\" method=\"post\">\n  <input name=\"email\" placeholder=\"Your email\">\n  <textarea name=\"message\"></textarea>\n  <button type=\"submit\">Send message</button>\n</form>"
+      },
+      "tokens": 96
+    },
+    {
+      "id": "e11",
+      "type": "tool_result",
+      "tool": "edit_file",
+      "output": "Replaced 1 occurrence in contact.html.",
+      "tokens": 16,
+      "artifact": {
+        "kind": "webpage",
+        "files": {
+          "contact.html": "<form action=\"/api/contact\" method=\"post\">\n  <input name=\"email\" placeholder=\"Your email\">\n  <textarea name=\"message\"></textarea>\n  <button type=\"submit\">Send message</button>\n</form>"
+        },
+        "renderId": "form-wired"
+      }
+    },
+    {
+      "id": "e12",
+      "type": "tool_call",
+      "tool": "render_page",
+      "input": { "fresh": true },
+      "tokens": 14
+    },
+    {
+      "id": "e13",
+      "type": "tool_result",
+      "tool": "render_page",
+      "output": "Fresh render (cache bypassed): clicking Send posts to /api/contact and returns 200. The confirmation message appears.",
+      "tokens": 44,
+      "artifact": {
+        "kind": "webpage",
+        "files": {
+          "contact.html": "<form action=\"/api/contact\" method=\"post\">\n  <input name=\"email\" placeholder=\"Your email\">\n  <textarea name=\"message\"></textarea>\n  <button type=\"submit\">Send message</button>\n</form>"
+        },
+        "renderId": "form-works"
+      }
+    },
+    {
+      "id": "e14",
+      "type": "assistant_message",
+      "text": "Fixed. The form's action was empty and its button wasn't a submit button, so clicks went nowhere. The first check said it was fine — but that was a stale, cached result; reading the real file is what surfaced the bug. The lesson isn't that the agent got a misleading signal. It's that it was set up to double-check one before trusting it. The form now posts to /api/contact and shows a confirmation.",
+      "tokens": 120
+    }
+  ]
+}

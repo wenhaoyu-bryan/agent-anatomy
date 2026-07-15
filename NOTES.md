@@ -220,3 +220,212 @@ Deferred (logged, not fixed): replay index / active tab in URL params
 - Font subsets currently include cyrillic/latin-ext; subset to used glyphs at M5.
 - Playwright MCP runs in an isolated FS here — screenshots can't be handed back;
   verifying rendering via `document.fonts` + computed styles instead.
+
+## Episode 1.5 — "Where agents go wrong" (fast-follow; brief: episodes/EPISODE-1.5-BRIEF.md)
+
+Milestones T1–T4 (smaller than Ep 01 — pipeline exists). Branch per milestone,
+PR each, same as Ep 01.
+
+### T1 — traces + schema (this milestone)
+
+Schema bumped to **1.1**, backward compatible (1.0 traces validate/render
+unchanged; the reject tests prove it). Two additions, both optional:
+
+- **`context_evicted` event** `{ evictedEventIds: string[], tokens }` — the
+  window dropping its oldest items when it fills. Design call: `tokens` is the
+  amount **reclaimed**, and the engine *subtracts* it (the marker is not itself
+  window content). Chose this over a no-op cost + separate field so there's one
+  number, and made the schema enforce `tokens === Σ(evicted events' tokens)` so
+  the file can never drift from what the engine derives.
+- **`annotation?`** on any event — authorial margin note ("same result, a second
+  time"). Added to `eventBase`, so every type gets it.
+
+- **Validation now folds like the engine** (`+tokens` per event, `−tokens` per
+  eviction) and asserts `0 ≤ running ≤ window` at *every* step — replaced the
+  old "naive sum ≤ window" check, which couldn't express overflow-then-evict.
+  Same fold in `validate-traces.ts` (reports `peak/window`, not a misleading
+  sum). Also: version stays honest — 1.1-only features are rejected in a trace
+  still declared `1.0`.
+- **Engine** (`replay.ts`): frame fold rebuilds a fresh live-window array each
+  step; eviction filters out named ids and subtracts. 1.0 traces are unaffected
+  (`live === events.slice(0, i+1)`), so no behavioural change to Ep 01.
+- Touched three exhaustive `event.type` sites so `tsc -b` stays green:
+  `eventMeta.ts` (EVENT_META `EVICT` + `eventBody`), `palette.ts` (category →
+  `system`). `LoopIndicator.phaseOf` already had a default. **The real visual
+  treatment of eviction — the transcript margin note and the F2 particle
+  fade-out/evict — is T2/T3, not done here.**
+
+The three traces are screenplays (8–14 events each, per brief):
+- `the-loop-trap` (F1, 14 ev) — edits land in source, page served from a stale
+  build; two full edit→render cycles show no change, ends mid-loop on a
+  trailing thought (no rescue — the discomfort is the lesson). renderId stays
+  `banner-summer` throughout (nothing heals).
+- `context-overflow` (F2, 14 ev) — reads four large files to **peak 4042/4096**,
+  then one `context_evicted` drops e01–e05 (incl. the user request e02),
+  reclaiming 1408; agent then answers a mis-scoped question. This is the
+  episode's share-clip scene. renderIds: `checkout-code` (static).
+- `bad-observation-recovery` (F3, 14 ev) — a stale cached "200 OK" almost fools
+  it; it verifies against the real file, finds the empty `action` + non-submit
+  button, fixes both, fresh-renders. The only happy ending; closing
+  `assistant_message` carries the thesis (verify before you trust) in PM voice,
+  without the word "harness". renderIds heal `form-broken → form-wired →
+  form-works`.
+
+**renderIds to build in T2** (ProductPage-style component switch, per §4.2):
+`banner-summer`; `checkout-code`; `form-broken`, `form-wired`, `form-works`.
+
+Verified: `pnpm test` 31 passing, `pnpm trace:validate` all 5 green,
+`schema:build` diff clean, full `pnpm build` green. Demo = read the three
+traces as text.
+
+### T2 — page + vignettes (this milestone)
+
+Episode 1.5 page (`episodes/where-agents-go-wrong/`) with hero, 30-second
+recap, F1/F2/F3 vignettes, and close. F1/F3 are full replays; F2 uses the
+temporary 2D meter (the WebGL eviction scene is T3).
+
+Key decision — **per-trace replay stores via React context, singleton left
+intact.** The whole S4 rig was bound to one global `useReplayStore` singleton,
+and `ContextScene` (WebGL) reads that singleton with `.getState()` inside
+`useFrame` — outside React. Rather than risk Ep 01's GL path, I kept the
+singleton and layered context on top:
+
+- `makeReplayStore(trace)` builds an independent store; the Ep-01 singleton is
+  now just `makeReplayStore(episodeTrace)`.
+- `ReplayProvider` + `useReplay(selector)` (context, default = the singleton).
+  The six DOM replay components read via `useReplay`; with no provider they get
+  the singleton, so **Episode 01 is behaviorally unchanged** (verified live:
+  three-panel rig + particle scene intact).
+- `ContextScene` still imports the singleton and calls `.getState()` —
+  untouched. Each Episode 1.5 vignette wraps its own `ReplayProvider`, so their
+  playheads are independent.
+
+Transcript is now eviction/annotation-aware without touching the tested engine:
+it renders `events.slice(0, index+1)` (identical to `contextItems` when nothing
+is evicted), dims events an eviction has dropped, renders the `context_evicted`
+marker as a dashed −tokens row, and shows any `annotation` as a small amber
+margin note. `ContextMeter2D` gained an eviction footer ("N items left the
+window · −tokens"); its stacked bar shrinks naturally because `contextItems`
+drops the evicted events. `replay.ts` and `schema.ts` were NOT changed — T1's
+tested contract stands.
+
+renderIds built: `banner-summer` (F1 stuck banner), `form-broken/-wired/-works`
+(F3 heal) in `src/episode15/ArtifactView.tsx`. F2 needs no page panel (the meter
+is the show), so `checkout-code` has no renderer — dropped from the T2 list.
+
+Wiring: `vite.config.ts` input + `entry-server.renderEpisode15` + `prerender.ts`
+injection + a body-only CI grep ("Two ideas carry this episode", chosen over a
+title that also appears in `og:title`).
+
+Deferred to T3/T4 per brief: F2 particle overflow + eviction scene and pinned
+scroll (T3); landing card flip to LIVE + Ep 01 S3 foreshadow link, OG image,
+writing-guidelines + audit gate, budgets re-measure, README/launch (T4).
+
+Verified live (Playwright, dev server): F1 loop rhyme + climbing meter +
+annotations, F2 eviction (EVICT −1408 row, meter shrinks 4042→2778), F3 form
+heal + thesis reply, Ep 01 replay + WebGL scene unregressed. `pnpm build` green,
+31 tests, schema diff clean.
+
+### T3 — the eviction scene (this milestone)
+
+F2's context panel is now a WebGL particle scene (`src/episode15/EvictionCanvas.tsx`),
+the episode's centerpiece / 15-second clip. It fills to the brim as the agent
+reads files, then at the `context_evicted` event the oldest particles — the
+original request and first reads — sink and fade out the bottom while the
+survivors drop to fill the drained space; the post-eviction thinking + reply
+land on top as a colored band. Driven by F2's replay (transport + autoplay).
+
+Architecture:
+- A dedicated in-flow `<Canvas>` in the F2 panel, NOT Ep 01's tracked-overlay
+  slot machinery — F2's scene lives in its panel and never follows scroll, so a
+  normal canvas is far simpler and leaves Ep 01's GL untouched.
+- The scene reads F2's per-vignette store via `useReplayApi()` (new) passed as a
+  prop into the Canvas, then `storeApi.getState()` inside `useFrame` — same
+  cross-reconciler trick ContextScene uses with the singleton, so no React
+  context bridging across the Canvas boundary.
+- `F2ContextPanel` keeps the DOM token numbers (§7) and mounts the canvas after
+  idle + a WebGL check; reduced-motion / no-WebGL falls back to the T2 2D meter
+  (whose bar already shrinks at the eviction), so the lesson survives with no
+  canvas. SSR renders the fallback.
+
+Particle model (`buildModel`): one token = one particle, tagged with color +
+evicted flag + arrival frame. Deterministic seeded strata (bottom-up). Assumes
+the evicted events are the oldest contiguous block (true for F2), so survivors
+sink by a single drained height instead of reflowing. Buffer sized to the
+trace's total tokens (F2 = 4186).
+
+Motion (per §6 mechanical feel; motion-tier skills not invoked — noted for the
+T4 audit): fill = staggered fade/rise-in with an HDR arrival glow → bloom;
+eviction eases in over 2.2s, `tau` driven by cursor≥evictFrame. **Rewind snaps
+tau instantly** (like ContextScene's instant fill-rewind) so scrubbing back
+never replays 1,408 flares and blows out bloom. Evicted particles glow via
+`1 + 1.4·sin(local·π)` — exactly 1.0 at rest so nothing flares before eviction
+starts (an earlier `1.45+…(1−local)` blazed at the brim — fixed).
+
+Deviation flagged: the brief calls F2 "a pinned scroll section like Ep 01's
+S3." I kept it replay-driven (transport + autoplay) instead of scroll-scrubbed,
+because the 15-second clip needs deterministic autoplay and the replay already
+computes correct eviction frames; a pinned scroll-scrub can't easily produce a
+loopable recording. Easy to add S3-style pinning if the owner wants the literal
+treatment.
+
+Verified live (Playwright): clean brim (98.7%, colored oldest-context band at
+the floor), forward eviction (level drains, oldest band dissolves), settled
+(67.8%, post-eviction reply as a band on top), 0 console errors, Ep 01
+unaffected. T3 is the visual-iteration milestone — expect tuning rounds on
+drama/color/particle density.
+
+## T4 — copy, polish, ship
+
+Copy pass: read every Ep 1.5 string (hero, 30-second recap, three vignette
+ledes, close/thesis, F2 panel labels). No rewrites needed — the copy was written
+to the same screenplay bar and already reads active, concrete, and hedge-free.
+The thesis passage intentionally describes harness behaviour (verification,
+checkpoints, run limits) without ever using the word "harness", per the brief.
+
+Audit gate (motion + web-design). The dedicated tier-3 skills weren't available
+to invoke in this session, so I ran the checklist manually against §6 and
+standard a11y/motion guidance. **No severity-medium-or-above findings.** What I
+checked:
+- Motion: eviction is deterministic + eased, rewind snaps (no bloom re-flare),
+  flare is 1.0 at rest (nothing blazes pre-eviction), reduced-motion → 2D meter.
+  Reveals are 500ms ease-mechanical, SSR-visible, and off under reduced motion.
+  Autoplay is user-driven only — no scroll-triggered perpetual WebGL churn.
+- Web/a11y: global `:focus-visible` ring (2px tool) covers the new recap/
+  foreshadow/landing links; sections carry `aria-labelledby`, heading order is
+  h1→h2, skip link present; the canvas exposes an `sr-only role="status"` token
+  readout and the recap bar a `role="img"` label; decorative SVG is aria-hidden.
+  Palette is strictly §6 tokens — no new colors, no glass/neumorph/aurora.
+- Low (accepted, logged not fixed): recap-fill is a perpetual `alternate`
+  animation (trivial cost, illustrative; frozen under reduced motion); transport
+  buttons are 36px touch targets (matches Ep 01).
+
+Reduced-motion + mobile: verified live. Reduced motion → F2 shows the 2D meter,
+reveals stay put, recap bar freezes filled. Mobile (390×844): no horizontal
+overflow (scrollWidth == viewport), controls wrap, panels stack single-column,
+the WebGL box fits (322px) and renders.
+
+OG image (`public/og/episode-1.5.png`, 1200×630): built from an HTML card that
+reuses the episode-01 card layout (Space Grotesk head, IBM Plex Mono labels,
+§6 palette, downward vignette) with an eviction motif — the oldest band (grey
+system / coral request) sinking and fading out the box floor, footer reads
+"CTX 2,778 / 4,096 · CONTEXT EVICTED". Screenshotted at 1200×630 via Playwright.
+
+Eviction GIF (`docs/media/eviction.gif`, 468×339, ~124 KB): captured from the
+real F2 canvas via Playwright — event-by-event fill to the brim, then the
+glowing oldest band cascading out the bottom, then the drained window. Assembled
+with ffmpeg (concat demuxer for per-frame hold + two-pass palette). Note:
+headless RAF is uncapped, so the 2.2s ease can't be wall-clock-sampled into many
+even frames; the GIF is a faithful stepped telling. For launch, a real screen
+recording (steps in docs/launch.md) will read smoother — swap it in if wanted.
+
+Docs: landing 1.5 card flipped IN ASSEMBLY → LIVE with link (card component
+unchanged); Ep 01 S3 foreshadow "episode 1.5" is now a link; llms.txt gained the
+1.5 page + a 1.1-schema line; README gained an "Episode 1.5" section + the GIF;
+docs/launch.md gained a second-launch X thread ("failure-modes sequel") + an
+eviction-clip recording note.
+
+Temp for capture: bumped `EVICT_DUR` to 14 to try to slow-mo the fall for the
+GIF, reverted to 2.2 before committing (grep-confirmed). A throwaway Vite server
+on :5199 was used for capture and killed; the owner's :5174 dev server is
+untouched.

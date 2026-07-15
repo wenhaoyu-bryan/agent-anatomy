@@ -1,8 +1,8 @@
 # Agent Anatomy
 
-> Interactive visual essays explaining how AI systems actually work, for readers with no AI background. Episode 01, "How an AI agent works," teaches the agent loop (think → act → observe → repeat), the context window as a finite token budget, and tool use — through a scroll-driven WebGL essay and an interactive replay of a scripted agent run fixing a broken product page.
+> Interactive visual essays explaining how AI systems actually work, for readers with no AI background. Episode 01, "How an AI agent works," teaches the agent loop (think → act → observe → repeat), the context window as a finite token budget, and tool use — through a scroll-driven WebGL essay and an interactive replay of a scripted agent run fixing a broken product page. Episode 1.5, "Where agents go wrong," is the darker companion: three failure modes — a loop trap, a context overflow that evicts the original request, and a bad observation the agent catches by verifying — each a short replayable trace.
 
-The project ships two things: the essay, and an open trace format + replay engine. A trace is a JSON file describing one complete agent run (system prompt, user message, thinking, tool calls, tool results with artifact snapshots, assistant message — each with a token estimate). The headless replay engine renders any trace that fits the schema.
+The project ships two things: the essay, and an open trace format + replay engine. A trace is a JSON file describing one complete agent run (system prompt, user message, thinking, tool calls, tool results with artifact snapshots, assistant message — each with a token estimate). The headless replay engine renders any trace that fits the schema. The 1.1 schema adds a context-eviction event and optional authorial annotations, and the same engine renders both episodes — the format's second consumer, proving it generalizes.
 
 Made by Wenhao Yu (wenhaoyu.bryan@gmail.com). MIT licensed.
 
@@ -10,6 +10,7 @@ Made by Wenhao Yu (wenhaoyu.bryan@gmail.com). MIT licensed.
 
 - [Series index](https://wenhaoyu-bryan.github.io/agent-anatomy/): all episodes and their status
 - [Episode 01 — How an AI agent works](https://wenhaoyu-bryan.github.io/agent-anatomy/episodes/how-an-agent-works/): the full interactive essay
+- [Episode 1.5 — Where agents go wrong](https://wenhaoyu-bryan.github.io/agent-anatomy/episodes/where-agents-go-wrong/): three failure modes (loop trap, context overflow, bad-observation recovery) as short replays
 
 ## Repository
 

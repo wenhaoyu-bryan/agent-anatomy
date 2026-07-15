@@ -11,9 +11,14 @@ export interface ReplayFrame {
   index: number;
   /** The event at this index, or null before the run starts. */
   event: TraceEvent | null;
-  /** Everything that has entered the context window so far, in order. */
+  /**
+   * What is LIVE in the context window at this index, in arrival order.
+   * A `context_evicted` event removes the events it names (and is not itself
+   * a window item); every other event adds itself. For a trace with no
+   * eviction this is simply every event so far.
+   */
   contextItems: TraceEvent[];
-  /** Cumulative token estimate — fold of `tokens` over contextItems. */
+  /** Token estimate of what's live — folds +tokens per event, −tokens per eviction. */
   tokensUsed: number;
   /** The world as of this index (last snapshot at or before it). */
   artifact: ArtifactState;
@@ -53,15 +58,25 @@ export function createReplay(trace: Trace): Replay {
   ];
   let tokensUsed = 0;
   let artifact = initialArtifact;
+  // Live window contents, rebuilt into a fresh array per frame so scrubbing to
+  // any index is safe and shares no mutable state.
+  let live: TraceEvent[] = [];
   events.forEach((event, i) => {
-    tokensUsed += event.tokens;
-    if (event.type === "tool_result" && event.artifact) {
-      artifact = event.artifact;
+    if (event.type === "context_evicted") {
+      const evicted = new Set(event.evictedEventIds);
+      live = live.filter((item) => !evicted.has(item.id));
+      tokensUsed -= event.tokens;
+    } else {
+      live = [...live, event];
+      tokensUsed += event.tokens;
+      if (event.type === "tool_result" && event.artifact) {
+        artifact = event.artifact;
+      }
     }
     frames.push({
       index: i,
       event,
-      contextItems: events.slice(0, i + 1),
+      contextItems: live,
       tokensUsed,
       artifact,
     });

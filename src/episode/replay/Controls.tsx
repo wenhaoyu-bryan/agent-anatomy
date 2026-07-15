@@ -1,12 +1,17 @@
 import type { ReactNode } from "react";
-import { useReplayStore } from "./store";
+import { useReplay } from "./store";
 
 /** Transport controls. Inline SVG only (PLAN §3 — no icon packs). */
 export function Controls() {
-  const frame = useReplayStore((s) => s.frame);
-  const length = useReplayStore((s) => s.length);
-  const playing = useReplayStore((s) => s.playing);
-  const { toStart, prev, next, toEnd, togglePlay } = useReplayStore.getState();
+  const frame = useReplay((s) => s.frame);
+  const length = useReplay((s) => s.length);
+  const playing = useReplay((s) => s.playing);
+  // Actions are stable references on the store, so selecting each is cheap.
+  const toStart = useReplay((s) => s.toStart);
+  const prev = useReplay((s) => s.prev);
+  const next = useReplay((s) => s.next);
+  const toEnd = useReplay((s) => s.toEnd);
+  const togglePlay = useReplay((s) => s.togglePlay);
 
   const atStart = frame.index <= -1;
   const atEnd = frame.index >= length - 1;

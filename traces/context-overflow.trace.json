@@ -1,0 +1,118 @@
+{
+  "version": "1.1",
+  "meta": {
+    "id": "context-overflow",
+    "title": "Context overflow",
+    "description": "Asked to find the one thing to fix in a slow checkout, an agent reads its way through file after file until the window is full. To keep going it drops its oldest context — including the original request — then confidently answers a question no one asked. Token counts are hand-tuned estimates.",
+    "contextWindowTokens": 4096
+  },
+  "tools": [
+    {
+      "name": "read_file",
+      "description": "Open a file and see exactly what's inside."
+    }
+  ],
+  "initialArtifact": {
+    "kind": "webpage",
+    "files": {
+      "checkout.js": "import { priceCart } from \"./pricing.js\";\nimport { reserve } from \"./inventory.js\";\nimport { getCart } from \"./cart-utils.js\";\n// … 200 more lines …"
+    },
+    "renderId": "checkout-code"
+  },
+  "events": [
+    {
+      "id": "e01",
+      "type": "system_prompt",
+      "summary": "You are a coding agent investigating a performance problem. You can read files.",
+      "tokens": 400
+    },
+    {
+      "id": "e02",
+      "type": "user_message",
+      "text": "Customers say checkout is slow. Look through the code, find the cause, and tell me the single most important thing to fix first.",
+      "tokens": 40
+    },
+    {
+      "id": "e03",
+      "type": "thinking",
+      "text": "A performance question. The bottleneck could be anywhere in the checkout path, so I'll read checkout.js and each file it depends on before deciding.",
+      "tokens": 48
+    },
+    {
+      "id": "e04",
+      "type": "tool_call",
+      "tool": "read_file",
+      "input": { "path": "checkout.js" },
+      "tokens": 20
+    },
+    {
+      "id": "e05",
+      "type": "tool_result",
+      "tool": "read_file",
+      "output": "// checkout.js — 214 lines. Orchestrates the checkout: builds the cart, prices it, reserves stock, records analytics, then redirects to payment. Imports cart-utils.js, pricing.js, inventory.js, analytics.js.",
+      "tokens": 900
+    },
+    {
+      "id": "e06",
+      "type": "tool_call",
+      "tool": "read_file",
+      "input": { "path": "cart-utils.js" },
+      "tokens": 18
+    },
+    {
+      "id": "e07",
+      "type": "tool_result",
+      "tool": "read_file",
+      "output": "// cart-utils.js — 190 lines. Reads the cart from storage and normalizes line items. Re-parses the full cart on every call rather than caching it.",
+      "tokens": 860
+    },
+    {
+      "id": "e08",
+      "type": "tool_call",
+      "tool": "read_file",
+      "input": { "path": "pricing.js" },
+      "tokens": 18
+    },
+    {
+      "id": "e09",
+      "type": "tool_result",
+      "tool": "read_file",
+      "output": "// pricing.js — 205 lines. Applies discounts and tax. Calls getCart() again internally and recomputes every promotion from scratch on each invocation.",
+      "tokens": 880
+    },
+    {
+      "id": "e10",
+      "type": "tool_call",
+      "tool": "read_file",
+      "input": { "path": "inventory.js" },
+      "tokens": 18
+    },
+    {
+      "id": "e11",
+      "type": "tool_result",
+      "tool": "read_file",
+      "output": "// inventory.js — 198 lines. Reserves stock. Issues one database query per line item in a loop — a classic N+1 — instead of a single batched query.",
+      "tokens": 840,
+      "annotation": "The window is now 4042 / 4096 — almost full."
+    },
+    {
+      "id": "e12",
+      "type": "context_evicted",
+      "evictedEventIds": ["e01", "e02", "e03", "e04", "e05"],
+      "tokens": 1408,
+      "annotation": "Full. The oldest context falls out to make room — the original request is in it."
+    },
+    {
+      "id": "e13",
+      "type": "thinking",
+      "text": "Both pricing and cart-utils re-read the cart on every call, and inventory runs a query per line item. The interesting structural problem here is how much redundant work these modules do against the same data.",
+      "tokens": 48
+    },
+    {
+      "id": "e14",
+      "type": "assistant_message",
+      "text": "I've mapped how these three modules fit together. Pricing and cart-utils both re-read the cart on every call, and inventory issues one query per line item. The cleanest structural improvement would be to read the cart once and pass it through — want me to refactor them to share a single read?",
+      "tokens": 96
+    }
+  ]
+}

@@ -12,6 +12,7 @@ const entry = (await import(
 
 inject("dist/index.html", entry.renderLanding());
 inject("dist/episodes/how-an-agent-works/index.html", entry.renderEpisode());
+inject("dist/episodes/where-agents-go-wrong/index.html", entry.renderEpisode15());
 
 rmSync("dist-ssr", { recursive: true, force: true });
 

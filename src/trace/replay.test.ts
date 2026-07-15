@@ -71,6 +71,50 @@ describe("createReplay — state derivation", () => {
   });
 });
 
+const evictionTrace: Trace = {
+  version: "1.1",
+  meta: { id: "evict", title: "e", description: "e", contextWindowTokens: 100 },
+  tools: [{ name: "noop", description: "noop" }],
+  initialArtifact: worldBefore,
+  events: [
+    { id: "a", type: "system_prompt", summary: "sys", tokens: 30 },
+    { id: "b", type: "user_message", text: "ask", tokens: 20 },
+    { id: "c", type: "thinking", text: "hmm", tokens: 40 },
+    { id: "d", type: "context_evicted", evictedEventIds: ["a", "b"], tokens: 50 },
+    { id: "e", type: "assistant_message", text: "done", tokens: 25 },
+  ],
+};
+
+describe("createReplay — context eviction (v1.1)", () => {
+  it("subtracts reclaimed tokens and drops the evicted events from the window", () => {
+    const replay = createReplay(evictionTrace);
+
+    // Full window just before the eviction.
+    expect(replay.stateAt(2).tokensUsed).toBe(90);
+    expect(replay.stateAt(2).contextItems.map((event) => event.id)).toEqual(["a", "b", "c"]);
+
+    // The eviction frame: tokens fall by 50, a and b leave, the marker itself
+    // is not a window item.
+    const evicted = replay.stateAt(3);
+    expect(evicted.event?.type).toBe("context_evicted");
+    expect(evicted.tokensUsed).toBe(40);
+    expect(evicted.contextItems.map((event) => event.id)).toEqual(["c"]);
+
+    // Life goes on: the next event adds itself on top of the reduced window.
+    const after = replay.stateAt(4);
+    expect(after.tokensUsed).toBe(65);
+    expect(after.contextItems.map((event) => event.id)).toEqual(["c", "e"]);
+  });
+
+  it("scrubbing back before the eviction restores the full window", () => {
+    const replay = createReplay(evictionTrace);
+    replay.seek(4);
+    expect(replay.stateAt(1).contextItems.map((event) => event.id)).toEqual(["a", "b"]);
+    // And re-reading the eviction frame is still correct (no shared mutation).
+    expect(replay.stateAt(3).contextItems.map((event) => event.id)).toEqual(["c"]);
+  });
+});
+
 describe("createReplay — navigation and bounds", () => {
   it("next/prev step the cursor and clamp at both ends", () => {
     const replay = createReplay(trace);

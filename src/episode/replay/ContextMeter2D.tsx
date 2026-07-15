@@ -1,4 +1,4 @@
-import { useReplayStore } from "./store";
+import { useReplay } from "./store";
 import { EVENT_META } from "./eventMeta";
 
 const LEGEND = [
@@ -14,8 +14,8 @@ const LEGEND = [
  * fallback (PLAN §7).
  */
 export function ContextMeter2D() {
-  const frame = useReplayStore((s) => s.frame);
-  const windowTokens = useReplayStore((s) => s.windowTokens);
+  const frame = useReplay((s) => s.frame);
+  const windowTokens = useReplay((s) => s.windowTokens);
 
   const pct = Math.min(100, (frame.tokensUsed / windowTokens) * 100);
 
@@ -64,14 +64,23 @@ export function ContextMeter2D() {
         ))}
       </ul>
 
-      {frame.event && (
-        <p className="mt-auto border-t border-[var(--color-hairline)] pt-3 font-mono text-xs text-[var(--color-muted)]">
-          <span style={{ color: EVENT_META[frame.event.type].color }}>
-            {EVENT_META[frame.event.type].label}
-          </span>{" "}
-          entered the window · +{frame.event.tokens} tokens
-        </p>
-      )}
+      {frame.event &&
+        (frame.event.type === "context_evicted" ? (
+          <p className="mt-auto border-t border-[var(--color-hairline)] pt-3 font-mono text-xs text-[var(--color-muted)]">
+            <span style={{ color: EVENT_META.context_evicted.color }}>
+              {frame.event.evictedEventIds.length} item
+              {frame.event.evictedEventIds.length === 1 ? "" : "s"}
+            </span>{" "}
+            left the window · −{frame.event.tokens} tokens
+          </p>
+        ) : (
+          <p className="mt-auto border-t border-[var(--color-hairline)] pt-3 font-mono text-xs text-[var(--color-muted)]">
+            <span style={{ color: EVENT_META[frame.event.type].color }}>
+              {EVENT_META[frame.event.type].label}
+            </span>{" "}
+            entered the window · +{frame.event.tokens} tokens
+          </p>
+        ))}
     </div>
   );
 }

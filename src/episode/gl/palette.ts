@@ -38,5 +38,10 @@ export function categoryOf(type: TraceEvent["type"]): Category {
       return "tool";
     case "assistant_message":
       return "assistant";
+    case "context_evicted":
+      // A bookkeeping event, not window content — treated as system-grey where
+      // it surfaces at all. The eviction's visible drama is the particles that
+      // LEAVE, coloured by whatever they originally were.
+      return "system";
   }
 }

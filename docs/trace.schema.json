@@ -6,7 +6,10 @@
       "properties": {
         "version": {
           "type": "string",
-          "const": "1.0"
+          "enum": [
+            "1.0",
+            "1.1"
+          ]
         },
         "meta": {
           "type": "object",
@@ -98,6 +101,10 @@
                     "type": "integer",
                     "minimum": 0
                   },
+                  "annotation": {
+                    "type": "string",
+                    "minLength": 1
+                  },
                   "type": {
                     "type": "string",
                     "const": "system_prompt"
@@ -125,6 +132,10 @@
                   "tokens": {
                     "type": "integer",
                     "minimum": 0
+                  },
+                  "annotation": {
+                    "type": "string",
+                    "minLength": 1
                   },
                   "type": {
                     "type": "string",
@@ -154,6 +165,10 @@
                     "type": "integer",
                     "minimum": 0
                   },
+                  "annotation": {
+                    "type": "string",
+                    "minLength": 1
+                  },
                   "type": {
                     "type": "string",
                     "const": "thinking"
@@ -181,6 +196,10 @@
                   "tokens": {
                     "type": "integer",
                     "minimum": 0
+                  },
+                  "annotation": {
+                    "type": "string",
+                    "minLength": 1
                   },
                   "type": {
                     "type": "string",
@@ -214,6 +233,10 @@
                   "tokens": {
                     "type": "integer",
                     "minimum": 0
+                  },
+                  "annotation": {
+                    "type": "string",
+                    "minLength": 1
                   },
                   "type": {
                     "type": "string",
@@ -272,6 +295,10 @@
                     "type": "integer",
                     "minimum": 0
                   },
+                  "annotation": {
+                    "type": "string",
+                    "minLength": 1
+                  },
                   "type": {
                     "type": "string",
                     "const": "assistant_message"
@@ -286,6 +313,42 @@
                   "tokens",
                   "type",
                   "text"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "tokens": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "annotation": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "type": {
+                    "type": "string",
+                    "const": "context_evicted"
+                  },
+                  "evictedEventIds": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "minItems": 1
+                  }
+                },
+                "required": [
+                  "id",
+                  "tokens",
+                  "type",
+                  "evictedEventIds"
                 ],
                 "additionalProperties": false
               }
