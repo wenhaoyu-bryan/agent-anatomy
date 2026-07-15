@@ -84,8 +84,14 @@ export function ContextWindowSection() {
             must fit inside one window. Watch it fill as the run unfolds.
           </p>
           <p className="mt-3 text-sm leading-relaxed text-[var(--color-muted)]">
-            Every tool result spends budget. What happens when it fills up? That&rsquo;s episode
-            1.5.
+            Every tool result spends budget. What happens when it fills up? That&rsquo;s{" "}
+            <a
+              href={`${import.meta.env.BASE_URL}episodes/where-agents-go-wrong/`}
+              className="underline decoration-[var(--color-hairline)] underline-offset-4 transition-colors hover:text-[var(--color-ink)]"
+            >
+              episode 1.5
+            </a>
+            .
           </p>
         </div>
 

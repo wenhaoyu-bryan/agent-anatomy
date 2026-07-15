@@ -1,4 +1,5 @@
 const EPISODE_URL = `${import.meta.env.BASE_URL}episodes/how-an-agent-works/`;
+const EPISODE_1_5_URL = `${import.meta.env.BASE_URL}episodes/where-agents-go-wrong/`;
 
 export function Landing() {
   return (
@@ -32,7 +33,8 @@ export function Landing() {
             number="1.5"
             title="Where agents go wrong"
             blurb="Context overflow, wrong turns, dead ends — and how agents recover."
-            status="assembly"
+            href={EPISODE_1_5_URL}
+            status="live"
           />
           <EpisodeCard number="02" title="To be announced" blurb="" status="planned" />
         </section>

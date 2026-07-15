@@ -374,3 +374,58 @@ the floor), forward eviction (level drains, oldest band dissolves), settled
 (67.8%, post-eviction reply as a band on top), 0 console errors, Ep 01
 unaffected. T3 is the visual-iteration milestone — expect tuning rounds on
 drama/color/particle density.
+
+## T4 — copy, polish, ship
+
+Copy pass: read every Ep 1.5 string (hero, 30-second recap, three vignette
+ledes, close/thesis, F2 panel labels). No rewrites needed — the copy was written
+to the same screenplay bar and already reads active, concrete, and hedge-free.
+The thesis passage intentionally describes harness behaviour (verification,
+checkpoints, run limits) without ever using the word "harness", per the brief.
+
+Audit gate (motion + web-design). The dedicated tier-3 skills weren't available
+to invoke in this session, so I ran the checklist manually against §6 and
+standard a11y/motion guidance. **No severity-medium-or-above findings.** What I
+checked:
+- Motion: eviction is deterministic + eased, rewind snaps (no bloom re-flare),
+  flare is 1.0 at rest (nothing blazes pre-eviction), reduced-motion → 2D meter.
+  Reveals are 500ms ease-mechanical, SSR-visible, and off under reduced motion.
+  Autoplay is user-driven only — no scroll-triggered perpetual WebGL churn.
+- Web/a11y: global `:focus-visible` ring (2px tool) covers the new recap/
+  foreshadow/landing links; sections carry `aria-labelledby`, heading order is
+  h1→h2, skip link present; the canvas exposes an `sr-only role="status"` token
+  readout and the recap bar a `role="img"` label; decorative SVG is aria-hidden.
+  Palette is strictly §6 tokens — no new colors, no glass/neumorph/aurora.
+- Low (accepted, logged not fixed): recap-fill is a perpetual `alternate`
+  animation (trivial cost, illustrative; frozen under reduced motion); transport
+  buttons are 36px touch targets (matches Ep 01).
+
+Reduced-motion + mobile: verified live. Reduced motion → F2 shows the 2D meter,
+reveals stay put, recap bar freezes filled. Mobile (390×844): no horizontal
+overflow (scrollWidth == viewport), controls wrap, panels stack single-column,
+the WebGL box fits (322px) and renders.
+
+OG image (`public/og/episode-1.5.png`, 1200×630): built from an HTML card that
+reuses the episode-01 card layout (Space Grotesk head, IBM Plex Mono labels,
+§6 palette, downward vignette) with an eviction motif — the oldest band (grey
+system / coral request) sinking and fading out the box floor, footer reads
+"CTX 2,778 / 4,096 · CONTEXT EVICTED". Screenshotted at 1200×630 via Playwright.
+
+Eviction GIF (`docs/media/eviction.gif`, 468×339, ~124 KB): captured from the
+real F2 canvas via Playwright — event-by-event fill to the brim, then the
+glowing oldest band cascading out the bottom, then the drained window. Assembled
+with ffmpeg (concat demuxer for per-frame hold + two-pass palette). Note:
+headless RAF is uncapped, so the 2.2s ease can't be wall-clock-sampled into many
+even frames; the GIF is a faithful stepped telling. For launch, a real screen
+recording (steps in docs/launch.md) will read smoother — swap it in if wanted.
+
+Docs: landing 1.5 card flipped IN ASSEMBLY → LIVE with link (card component
+unchanged); Ep 01 S3 foreshadow "episode 1.5" is now a link; llms.txt gained the
+1.5 page + a 1.1-schema line; README gained an "Episode 1.5" section + the GIF;
+docs/launch.md gained a second-launch X thread ("failure-modes sequel") + an
+eviction-clip recording note.
+
+Temp for capture: bumped `EVICT_DUR` to 14 to try to slow-mo the fall for the
+GIF, reverted to 2.2 before committing (grep-confirmed). A throwaway Vite server
+on :5199 was used for capture and killed; the owner's :5174 dev server is
+untouched.

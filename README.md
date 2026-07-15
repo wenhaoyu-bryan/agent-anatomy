@@ -13,6 +13,29 @@ product page — event by event, with the world healing as it works.
 
 > **Live:** https://wenhaoyu-bryan.github.io/agent-anatomy/
 
+## Episode 1.5 — Where agents go wrong
+
+![The context window fills to the brim, then the oldest tokens — the original request — evict out the bottom while the agent keeps working](./docs/media/eviction.gif)
+
+**[Where agents go wrong](https://wenhaoyu-bryan.github.io/agent-anatomy/episodes/where-agents-go-wrong/)**
+is the darker companion piece: three ways an agent fails, each a short replay
+driven by the same engine.
+
+- **The loop trap** — it edits a file that never takes effect, re-renders, sees no
+  change, and tries the same fix again, forever. The transcript rhymes; the meter
+  only climbs. Agents don't get frustrated — they get expensive.
+- **Context overflow** — reading file after file, the window fills to the brim, then
+  the oldest particles (the original request among them) evict out the bottom. The
+  agent, having lost the plot, answers confidently — and wrong.
+- **A bad observation, caught** — a stale cache says the broken page works. The agent
+  nearly believes it, then verifies against the real file, finds the bug, and fixes it.
+  The one failure with a happy ending, and it's no accident.
+
+It's also the trace format's second consumer. The `1.1` schema adds a
+`context_evicted` event (which drives the eviction above) and optional authorial
+annotations — backward compatible, so every 1.0 trace still plays. Three new trace
+files, zero engine forks.
+
 This repo is two products, and both matter:
 
 1. **The essay** — a scroll-driven, WebGL-powered visual page.

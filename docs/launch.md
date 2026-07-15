@@ -1,6 +1,11 @@
-# Launch kit — Episode 01
+# Launch kit
 
-Ready-to-post material for launching Agent Anatomy. Attach the share clip
+Ready-to-post material for launching Agent Anatomy. Episode 01 material is below;
+the Episode 1.5 ("failure-modes sequel") second launch is at the bottom.
+
+## Episode 01
+
+Attach the share clip
 (record S3→S4 per the note at the bottom, or use `docs/media/replay.gif`)
 to the first post — clip-first is the whole strategy.
 
@@ -91,3 +96,52 @@ The composed-for-recording moment is S3 → S4 on desktop:
    particles streaming as you scrub), keep scrolling into S4, press play,
    let the replay run to the image-heal moment at EVT 11 (~7s).
 3. Stop at the keyboard appearing. No editing needed — that's the clip.
+
+---
+
+# Second launch — Episode 1.5 ("the failure-modes sequel")
+
+Post this once Episode 01 has had its run. Lead with the eviction clip — the
+oldest tokens falling out the bottom of a full window is the whole hook.
+
+## X thread (3 posts)
+
+**Post 1 (with the eviction clip):**
+
+> Episode 01 of Agent Anatomy showed the agent loop *working*.
+>
+> It doesn't always. Here's what "the context window filled up" actually looks
+> like — the oldest tokens, including the original request, evicting out the
+> bottom while the agent keeps going:
+>
+> https://wenhaoyu-bryan.github.io/agent-anatomy/episodes/where-agents-go-wrong/
+
+**Post 2:**
+
+> Three failure modes, each a short replay you can scrub:
+>
+> — the loop trap: it retries the same broken fix forever
+> — context overflow: it answers a question that scrolled out of memory
+> — a bad observation it *catches* by verifying instead of trusting a cache
+>
+> The last one carries the point.
+
+**Post 3:**
+
+> Good agents aren't the ones that never err — they're the ones instrumented to
+> notice. That's the episode.
+>
+> Same open engine as Ep 01, three new JSON traces. The schema grew one event
+> (context eviction) and stayed backward compatible — the format's second
+> consumer, in public: https://github.com/wenhaoyu-bryan/agent-anatomy
+
+## Recording the eviction clip
+
+The share moment is F2 (Failure 02 · Context overflow):
+
+1. Open the 1.5 page at 1440×900, hide the cursor, scroll to the F2 vignette
+   with the particle window at rest (full to the brim, ~98%).
+2. Press play. Record the fill topping out, then the oldest colored band sinking
+   and fading out the bottom as the meter drops (~98% → ~68%), and the transcript
+   delivering the confidently-wrong answer.
+3. Stop once the post-eviction reply lands. ~12–15s, no editing.
