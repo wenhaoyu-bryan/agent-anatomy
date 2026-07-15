@@ -500,3 +500,57 @@ Verified: `pnpm test` 46 passing (was 31; +15 for 1.2), `pnpm trace:validate`
 all 6 green, `pnpm schema:build` idempotent + regenerated, full `pnpm build`
 green (all three existing pages still prerender; three.js still lazy). No UI yet
 — demo = read the reheat-rice trace as text.
+
+### U2 — replay rig extension (this milestone)
+
+New episode page `episodes/how-ai-reads-the-web/` (`src/episode02/`), wired like
+Ep 1.5: `vite.config` input, `entry-server.renderEpisode02`, `prerender.ts`
+injection, and a body-only CI grep ("an answer assembles with visible", chosen
+so it doesn't also appear in og:title). Hero + S5 replay + a minimal series-index
+close; S2/S3/S4 scenes and the full S6 close come in U3/U4.
+
+**S5 rig** (`ReadingReplay.tsx`): Ep-01's three-panel rig reused via a
+`ReplayProvider` bound to the reheat-rice trace, driving the shared `Controls`,
+`Timeline`, `LoopIndicator`, `TranscriptPanel`, `ContextMeter2D`. Layout is
+**2-over-1**, not 3-across: transcript + context meter in a row, then the
+sources+answer showpiece **full-width below**. Reason (flagged deviation): with
+the panel as a narrow third column the citation threads bunched into a vertical
+band; giving the showpiece full width lets the threads arc horizontally
+(answer left → source chips right), which is the whole point of the share clip.
+Mobile keeps the tabbed one-panel-at-a-time pattern (verbatim from
+`ReplaySection`), with the sources panel stacking chips-over-answer.
+
+**`SourcesAnswerPanel.tsx`** — the new third panel, DOM/SVG only (no WebGL):
+- Source chips read `frame.sourceStates` (the v1.2 engine field): appear as the
+  search lists them ("found"), light with a hued dot + glow when read, and
+  strike through + dim with "✕ unread" when unreadable (the blog). `faviconHue`
+  drives each chip's dot/thread colour.
+- When the answer arrives, its text renders with cited spans as inline
+  `<button>`s (native focus + tap), and **SVG citation threads** are measured
+  from the live layout (`getBoundingClientRect` relative to the panel, so they
+  track scroll/resize + a `document.fonts.ready` re-measure) and drawn on with
+  `pathLength=1` + `stroke-dashoffset 1→0`, staggered per citation — "the answer
+  assembling with threads reaching back." Hover/focus a citation (or later a
+  chip) highlights its thread group and dims the rest.
+- Verified live (Playwright, preview build): jump-to-end → 5 chips in the right
+  states (nfsa/kitchen-basics read, quickbite ✕ unread, cooktalk/daily-ledger
+  found), 3 threads (span A→nfsa; span B→kitchen-basics + nfsa) fully drawn
+  (dashoffset 0), 2 keyboard-focusable citations, focus on span A dims the
+  other group to 0.18, **0 console errors/warnings** (clean hydration).
+
+Shared-component touch: `TranscriptPanel.EventText` now renders `search` (query
++ result count, muted) and `fetch` (ok → "Read {url}" + the extracted fragment
+in a cyan-ruled quote; unreadable → a coral "Couldn't read" note). Ep 01/1.5
+never carry these types, so they're unaffected.
+
+Design note for the U4 audit: `faviconHue` introduces per-source hues, a mild
+departure from §6's strict telemetry palette. Kept at moderate saturation and
+confined to small chip dots + the threads (the brief explicitly adds the field);
+the luminous thread is a soft blurred underlay, not neon — no glass/neumorph/
+aurora. Flagged here for the review-animations + web-design gate in U4.
+
+Verified: `pnpm test` 46 green, `pnpm trace:validate` 6 green, schema diff
+clean, full `pnpm build` green (four pages prerender now; ep02 initial JS ~21.5
+KB / 7.6 KB gz). Reduced-motion path = the existing 2D meter + the global
+transition-collapse (threads land in final state). Demo: play S5 to the end and
+watch the answer thread back to its two sources.

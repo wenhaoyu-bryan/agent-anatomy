@@ -3,6 +3,7 @@ import { renderToString } from "react-dom/server";
 import { Landing } from "../landing/Landing";
 import { Episode } from "../episode/Episode";
 import { Episode15 } from "../episode15/Episode15";
+import { Episode02 } from "../episode02/Episode02";
 
 /**
  * SSR entry for the build-time HTML snapshot (§8: view-source must show the
@@ -29,6 +30,14 @@ export function renderEpisode15(): string {
   return renderToString(
     <StrictMode>
       <Episode15 />
+    </StrictMode>,
+  );
+}
+
+export function renderEpisode02(): string {
+  return renderToString(
+    <StrictMode>
+      <Episode02 />
     </StrictMode>,
   );
 }
