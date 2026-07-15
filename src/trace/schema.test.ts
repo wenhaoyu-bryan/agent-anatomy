@@ -5,6 +5,7 @@ import exampleMinimal from "../../traces/example-minimal.trace.json";
 import loopTrap from "../../traces/the-loop-trap.trace.json";
 import contextOverflow from "../../traces/context-overflow.trace.json";
 import badObservation from "../../traces/bad-observation-recovery.trace.json";
+import reheatRice from "../../traces/reheat-rice.trace.json";
 
 describe("trace schema — shipped trace files", () => {
   it("validates fix-broken-page.trace.json", () => {
@@ -104,6 +105,127 @@ describe("trace schema — v1.1 rules", () => {
       i === overflow.events.length - 1 ? { ...event, annotation: "a note" } : event,
     );
     expect(traceSchema.safeParse({ ...overflow, events }).success).toBe(true);
+  });
+});
+
+describe("trace schema — episode 02 web retrieval (v1.2)", () => {
+  it("validates reheat-rice as a v1.2 trace with a 5-source registry", () => {
+    const trace = traceSchema.parse(reheatRice);
+    expect(trace.version).toBe("1.2");
+    expect(trace.meta.id).toBe("reheat-rice");
+    expect(trace.sources).toHaveLength(5);
+    expect(trace.events.length).toBeGreaterThanOrEqual(8);
+  });
+
+  it("searches once, reads two sources, and hits one unreadable page (the GEO beat)", () => {
+    const trace = traceSchema.parse(reheatRice);
+    const searches = trace.events.filter((event) => event.type === "search");
+    expect(searches).toHaveLength(1);
+
+    const fetches = trace.events.flatMap((event) => (event.type === "fetch" ? [event] : []));
+    const ok = fetches.filter((event) => event.status === "ok").map((event) => event.sourceId);
+    const unreadable = fetches
+      .filter((event) => event.status === "unreadable")
+      .map((event) => event.sourceId);
+    expect(ok).toEqual(["nfsa", "kitchen-basics"]);
+    expect(unreadable).toEqual(["quickbite-blog"]);
+  });
+
+  it("the answer cites only sources it actually read", () => {
+    const trace = traceSchema.parse(reheatRice);
+    const answer = trace.events.find((event) => event.type === "assistant_message");
+    expect(answer && answer.type === "assistant_message" && answer.citations).toBeTruthy();
+    const cited = new Set(
+      answer && answer.type === "assistant_message"
+        ? (answer.citations ?? []).flatMap((citation) => citation.sourceIds)
+        : [],
+    );
+    // The unreadable blog and the unread forum are never cited.
+    expect(cited).toEqual(new Set(["nfsa", "kitchen-basics"]));
+  });
+
+  it("all five shipped traces still validate under the 1.2 schema (backward compatible)", () => {
+    for (const raw of [fixBrokenPage, exampleMinimal, loopTrap, contextOverflow, badObservation]) {
+      expect(traceSchema.safeParse(raw).success).toBe(true);
+    }
+    // And their declared versions are unchanged — 1.2 didn't silently upgrade them.
+    expect(traceSchema.parse(fixBrokenPage).version).toBe("1.0");
+    expect(traceSchema.parse(contextOverflow).version).toBe("1.1");
+  });
+});
+
+describe("trace schema — v1.2 rules", () => {
+  const rice = traceSchema.parse(reheatRice);
+
+  it("rejects search / fetch / sources / citations in a trace still declared 1.1", () => {
+    expect(traceSchema.safeParse({ ...rice, version: "1.1" }).success).toBe(false);
+  });
+
+  it("rejects a fetch with status ok but no extracted fragment", () => {
+    const events = rice.events.map((event) =>
+      event.type === "fetch" && event.status === "ok"
+        ? { ...event, extracted: undefined }
+        : event,
+    );
+    expect(traceSchema.safeParse({ ...rice, events }).success).toBe(false);
+  });
+
+  it("rejects a fetch with status unreadable that still carries an extract", () => {
+    const events = rice.events.map((event) =>
+      event.type === "fetch" && event.status === "unreadable"
+        ? { ...event, extracted: "sneaky text" }
+        : event,
+    );
+    expect(traceSchema.safeParse({ ...rice, events }).success).toBe(false);
+  });
+
+  it("rejects a search result referencing a source not in the registry", () => {
+    const events = rice.events.map((event) =>
+      event.type === "search"
+        ? {
+            ...event,
+            results: [
+              ...event.results,
+              { sourceId: "ghost", title: "x", url: "x", snippet: "x" },
+            ],
+          }
+        : event,
+    );
+    expect(traceSchema.safeParse({ ...rice, events }).success).toBe(false);
+  });
+
+  it("rejects citing a source that was never fetched ok (a page that can't be read can't be cited)", () => {
+    // quickbite-blog came back unreadable; citing it must fail.
+    const events = rice.events.map((event) =>
+      event.type === "assistant_message" && event.citations
+        ? {
+            ...event,
+            citations: event.citations.map((citation, i) =>
+              i === 0 ? { ...citation, sourceIds: ["quickbite-blog"] } : citation,
+            ),
+          }
+        : event,
+    );
+    expect(traceSchema.safeParse({ ...rice, events }).success).toBe(false);
+  });
+
+  it("rejects a citation span that runs past the answer text", () => {
+    const events = rice.events.map((event) =>
+      event.type === "assistant_message" && event.citations
+        ? {
+            ...event,
+            citations: event.citations.map((citation, i) =>
+              i === 0 ? { ...citation, spanEnd: event.text.length + 50 } : citation,
+            ),
+          }
+        : event,
+    );
+    expect(traceSchema.safeParse({ ...rice, events }).success).toBe(false);
+  });
+
+  it("rejects a duplicate source id in the registry", () => {
+    const sources = [...(rice.sources ?? []), rice.sources![0]!];
+    expect(traceSchema.safeParse({ ...rice, sources }).success).toBe(false);
   });
 });
 

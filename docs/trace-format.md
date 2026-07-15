@@ -1,7 +1,7 @@
 # Trace format
 
-Current version: **1.1** (backward compatible — every 1.0 trace still validates
-and renders unchanged). See the [changelog](#changelog).
+Current version: **1.2** (backward compatible — every 1.0 and 1.1 trace still
+validates and renders unchanged). See the [changelog](#changelog).
 
 A **trace** is a JSON file describing one complete, scripted agent run: what the
 agent was asked, what it thought, which tools it called, what came back, and how
@@ -15,6 +15,7 @@ session logs can be adapted into traces.
   (generated from the zod source of truth in
   [`src/trace/schema.ts`](../src/trace/schema.ts) via `pnpm schema:build`)
 - **Complete example:** [`traces/fix-broken-page.trace.json`](../traces/fix-broken-page.trace.json)
+- **Web-retrieval example (v1.2):** [`traces/reheat-rice.trace.json`](../traces/reheat-rice.trace.json)
 - **Starter template:** [`traces/example-minimal.trace.json`](../traces/example-minimal.trace.json)
 
 ## Top level
@@ -38,7 +39,7 @@ session logs can be adapted into traces.
 
 ## Events
 
-Seven event types. Every event has a unique `id` and a `tokens` estimate —
+Nine event types. Every event has a unique `id` and a `tokens` estimate —
 hand-tuned and plausible, not exact. The engine derives live context usage by
 folding over events. Any event may carry an optional `annotation` (v1.1) — a
 short authorial note the UI renders in the margin, used sparingly.
@@ -50,8 +51,10 @@ short authorial note the UI renders in the margin, used sparingly.
 | `thinking` | `text` | the agent reasoning, in plain language |
 | `tool_call` | `tool`, `input` | the agent acting |
 | `tool_result` | `tool`, `output`, `artifact?` | what the world said back |
-| `assistant_message` | `text` | the agent's answer to the human |
+| `assistant_message` | `text`, `citations?` | the agent's answer to the human |
 | `context_evicted` | `evictedEventIds`, `tokens` | earlier items dropped from the window (v1.1) |
+| `search` | `query`, `results` | the agent searched the web (v1.2) |
+| `fetch` | `sourceId`, `url`, `status`, `extracted?` | the agent read (or failed to read) a page (v1.2) |
 
 Every `tool` referenced by a `tool_call` / `tool_result` must be declared in
 `tools`. Event `id`s must be unique. Live context usage — `+tokens` per event,
@@ -84,6 +87,85 @@ Rules the validator enforces:
 `context_evicted` and `annotation` are 1.1 features and are rejected in a trace
 that still declares `version: "1.0"`, so the version field stays honest.
 
+## Web retrieval (v1.2)
+
+When a question needs facts the model isn't sure of, a real agent searches the
+web, reads a few pages, and cites what it used. Version 1.2 models that with a
+`sources` registry, `search` and `fetch` events, and `citations` on the answer.
+
+### The `sources` registry
+
+An optional top-level array declaring every source once, so a panel can render
+its chip consistently. Search results, fetches, and citations all reference a
+source by `sourceId`.
+
+```jsonc
+"sources": [
+  {
+    "sourceId": "nfsa",                            // referenced everywhere else
+    "title": "Reheating rice safely — Food Standards Agency",
+    "url": "foodstandards.gov.example/rice-safety", // invented; nothing is fetched live
+    "faviconHue": 210                               // 0–360, gives the chip a stable colour
+  }
+]
+```
+
+### `search` and `fetch`
+
+```jsonc
+{
+  "id": "e04",
+  "type": "search",
+  "query": "is it safe to reheat rice food safety",
+  "results": [                                  // each references a registry source
+    { "sourceId": "nfsa", "title": "…", "url": "…", "snippet": "…" }
+  ],
+  "tokens": 210                                 // the query + snippets entering context
+}
+{
+  "id": "e06",
+  "type": "fetch",
+  "sourceId": "nfsa",
+  "url": "foodstandards.gov.example/rice-safety",
+  "status": "ok",                               // "ok" | "unreadable"
+  "extracted": "Uncooked rice can carry spores …", // the fragment that enters context
+  "tokens": 340
+}
+```
+
+A `fetch` with `status: "ok"` **must** carry the `extracted` fragment (that's
+what entered the window). A `fetch` with `status: "unreadable"` — a page that
+returned no readable text, e.g. a JavaScript-only shell — **must omit**
+`extracted` and costs only the few tokens of the empty response.
+
+### `citations` on the answer
+
+```jsonc
+{
+  "id": "e13",
+  "type": "assistant_message",
+  "text": "Short version: reheating rice is safe …",
+  "citations": [
+    { "spanStart": 175, "spanEnd": 287, "sourceIds": ["nfsa"] } // half-open [start, end)
+  ]
+}
+```
+
+Each citation binds a half-open character span `[spanStart, spanEnd)` of the
+answer text to the source(s) it came from.
+
+Rules the validator enforces:
+
+- Every `sourceId` in a search result, a fetch, or a citation must be declared
+  in the `sources` registry, and registry ids must be unique.
+- A citation span must satisfy `0 ≤ spanStart < spanEnd ≤ text.length`.
+- **A source can only be cited once it has been fetched with `status: "ok"`
+  earlier in the run** — a page that can't be read can't be cited. This is the
+  episode's thesis, encoded in the schema.
+
+`search`, `fetch`, `citations`, and the `sources` registry are 1.2 features and
+are rejected in a trace that still declares `version: "1.0"` or `"1.1"`.
+
 ## The artifact — the visible world
 
 ```jsonc
@@ -107,6 +189,19 @@ timeline scrubbing instant. `renderId` selects which visual state the
 3. Validate: `pnpm trace:validate` (also runs in CI on every push).
 
 ## Changelog
+
+### 1.2
+
+- Added web retrieval: a `search` event (a query plus results), a `fetch` event
+  that reads one page and may come back `unreadable`, an optional top-level
+  `sources` registry, and optional `citations` on `assistant_message` binding
+  answer spans to their sources. The checked-in
+  [`traces/reheat-rice.trace.json`](../traces/reheat-rice.trace.json) is the
+  first consumer.
+- The replay engine now derives a per-frame source status (`listed` → `read` /
+  `unreadable`) so panels can light source chips as the run progresses.
+- Backward compatible: every 1.0 and 1.1 trace validates and renders unchanged,
+  and the new features are rejected in a trace still declared 1.0 or 1.1.
 
 ### 1.1
 

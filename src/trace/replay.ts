@@ -6,6 +6,16 @@ import type { ArtifactState, Trace, TraceEvent } from "./schema";
  * are full states, not diffs), so scrubbing is O(1).
  */
 
+/**
+ * How far a source has progressed by a given frame (v1.2):
+ * - "listed": it appeared in a search result but hasn't been fetched.
+ * - "read": it was fetched successfully — its chip lights, it can be cited.
+ * - "unreadable": the fetch came back empty (the GEO beat).
+ * Monotonic: a read source stays read even if its fragment is later evicted —
+ * the answer that cited it still points there.
+ */
+export type SourceStatus = "listed" | "read" | "unreadable";
+
 export interface ReplayFrame {
   /** Index into trace.events; -1 = before the run starts. */
   index: number;
@@ -22,6 +32,12 @@ export interface ReplayFrame {
   tokensUsed: number;
   /** The world as of this index (last snapshot at or before it). */
   artifact: ArtifactState;
+  /**
+   * Per-source status at this index, keyed by sourceId (v1.2). Only holds
+   * sources that have surfaced (via search) or been fetched by now — empty
+   * for traces that never search. Fresh object per frame, safe to scrub.
+   */
+  sourceStates: Record<string, SourceStatus>;
 }
 
 export type ReplayListener = (frame: ReplayFrame, playing: boolean) => void;
@@ -54,13 +70,22 @@ export function createReplay(trace: Trace): Replay {
 
   // frames[i + 1] is the state at event index i; frames[0] is index -1.
   const frames: ReplayFrame[] = [
-    { index: -1, event: null, contextItems: [], tokensUsed: 0, artifact: initialArtifact },
+    {
+      index: -1,
+      event: null,
+      contextItems: [],
+      tokensUsed: 0,
+      artifact: initialArtifact,
+      sourceStates: {},
+    },
   ];
   let tokensUsed = 0;
   let artifact = initialArtifact;
   // Live window contents, rebuilt into a fresh array per frame so scrubbing to
   // any index is safe and shares no mutable state.
   let live: TraceEvent[] = [];
+  // Running source progress; cloned into each frame so scrubbing is safe.
+  const sources: Record<string, SourceStatus> = {};
   events.forEach((event, i) => {
     if (event.type === "context_evicted") {
       const evicted = new Set(event.evictedEventIds);
@@ -72,6 +97,15 @@ export function createReplay(trace: Trace): Replay {
       if (event.type === "tool_result" && event.artifact) {
         artifact = event.artifact;
       }
+      if (event.type === "search") {
+        for (const result of event.results) {
+          // A later search never demotes a source we've already read.
+          if (sources[result.sourceId] === undefined) sources[result.sourceId] = "listed";
+        }
+      }
+      if (event.type === "fetch") {
+        sources[event.sourceId] = event.status === "ok" ? "read" : "unreadable";
+      }
     }
     frames.push({
       index: i,
@@ -79,6 +113,7 @@ export function createReplay(trace: Trace): Replay {
       contextItems: live,
       tokensUsed,
       artifact,
+      sourceStates: { ...sources },
     });
   });
 

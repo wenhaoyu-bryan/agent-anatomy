@@ -8,7 +8,8 @@
           "type": "string",
           "enum": [
             "1.0",
-            "1.1"
+            "1.1",
+            "1.2"
           ]
         },
         "meta": {
@@ -60,6 +61,38 @@
             "additionalProperties": false
           },
           "minItems": 1
+        },
+        "sources": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "sourceId": {
+                "type": "string",
+                "minLength": 1
+              },
+              "title": {
+                "type": "string",
+                "minLength": 1
+              },
+              "url": {
+                "type": "string",
+                "minLength": 1
+              },
+              "faviconHue": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 360
+              }
+            },
+            "required": [
+              "sourceId",
+              "title",
+              "url",
+              "faviconHue"
+            ],
+            "additionalProperties": false
+          }
         },
         "initialArtifact": {
           "type": "object",
@@ -306,6 +339,37 @@
                   "text": {
                     "type": "string",
                     "minLength": 1
+                  },
+                  "citations": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "spanStart": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "spanEnd": {
+                          "type": "integer",
+                          "exclusiveMinimum": 0
+                        },
+                        "sourceIds": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "minItems": 1
+                        }
+                      },
+                      "required": [
+                        "spanStart",
+                        "spanEnd",
+                        "sourceIds"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "minItems": 1
                   }
                 },
                 "required": [
@@ -349,6 +413,120 @@
                   "tokens",
                   "type",
                   "evictedEventIds"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "tokens": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "annotation": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "type": {
+                    "type": "string",
+                    "const": "search"
+                  },
+                  "query": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "results": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "sourceId": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "title": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "url": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "snippet": {
+                          "type": "string",
+                          "minLength": 1
+                        }
+                      },
+                      "required": [
+                        "sourceId",
+                        "title",
+                        "url",
+                        "snippet"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "minItems": 1
+                  }
+                },
+                "required": [
+                  "id",
+                  "tokens",
+                  "type",
+                  "query",
+                  "results"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "tokens": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "annotation": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "type": {
+                    "type": "string",
+                    "const": "fetch"
+                  },
+                  "sourceId": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "url": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "ok",
+                      "unreadable"
+                    ]
+                  },
+                  "extracted": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "required": [
+                  "id",
+                  "tokens",
+                  "type",
+                  "sourceId",
+                  "url",
+                  "status"
                 ],
                 "additionalProperties": false
               }

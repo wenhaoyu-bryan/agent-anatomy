@@ -429,3 +429,74 @@ Temp for capture: bumped `EVICT_DUR` to 14 to try to slow-mo the fall for the
 GIF, reverted to 2.2 before committing (grep-confirmed). A throwaway Vite server
 on :5199 was used for capture and killed; the owner's :5174 dev server is
 untouched.
+
+## Episode 02 — "How AI Reads the Web" (full episode; brief: EPISODE-02-BRIEF.md)
+
+Milestones U1–U4. Owner ran `/goal … until finished`, so I'm building through
+all four without stopping for sign-off; each milestone still gets its own commit
++ NOTES entry, and the U1 trace is surfaced for the owner to read as a screenplay.
+
+### U1 — schema 1.2 + reheat-rice trace (this milestone)
+
+Schema bumped to **1.2**, backward compatible (1.0 and 1.1 traces validate and
+render unchanged; a dedicated test replays all five prior traces and asserts
+their versions are untouched). Additions, all optional:
+
+- **`search` event** `{ query, results: {sourceId,title,url,snippet}[] }` and
+  **`fetch` event** `{ sourceId, url, status: "ok"|"unreadable", extracted? }`.
+- **Top-level `sources` registry** `{ sourceId, title, url, faviconHue }[]` —
+  declared once, referenced by every result/fetch/citation.
+- **`citations`** on `assistant_message` — half-open `[spanStart, spanEnd)` char
+  spans of the answer text bound to `sourceIds`.
+
+Token semantics (the risk I flagged, now resolved): `tokens` = what enters the
+window, so search/fetch fold `+tokens` exactly like every other event — **no
+engine token-fold change**. A `fetch ok` must carry `extracted` (the fragment
+that entered context); an `unreadable` fetch omits it and costs only the ~20
+tokens of an empty response. This keeps the existing `superRefine` fold and the
+`validate-traces` peak calc unchanged for the window math.
+
+Integrity rules added to `superRefine`, folding alongside the token math:
+- every referenced `sourceId` must be in the registry; registry ids unique;
+- citation spans satisfy `0 ≤ start < end ≤ text.length`;
+- **a source can only be cited once it's been fetched `ok` earlier** — a page
+  that can't be read can't be cited (S4's caption, encoded as a schema rule);
+- `search`/`fetch`/`citations`/`sources` are rejected in a 1.0 or 1.1 trace, so
+  the version field stays honest (mirrors the 1.1 gate).
+
+**Engine** (`replay.ts`): added `SourceStatus` + per-frame `sourceStates`
+(`listed` → `read`/`unreadable`), cloned fresh per frame so scrubbing is safe.
+Monotonic — a read source stays read even if its fragment is later evicted (the
+citation still points there; reheat-rice has no eviction anyway). Store exposes
+`sources` (the registry) as a selector; DOM reads live status off
+`frame.sourceStates`. `contextItems`/tokens/artifact logic untouched, so Ep 01
+and 1.5 are behaviorally unchanged (46 tests green, incl. the pre-1.2 traces).
+
+Exhaustive `event.type` sites updated so `tsc -b` stays green: `eventMeta.ts`
+(EVENT_META `SEARCH`/`FETCH` + `eventBody`), `palette.ts` (`categoryOf` →
+`tool`/cyan for both). Everything else reads via `EVENT_META[...]` lookups, so
+no other site needed touching.
+
+**The trace** (`traces/reheat-rice.trace.json`, 13 events, v1.2, window 4096,
+peak 1672): "Is it safe to reheat rice?" — asks → thinks (knowledge isn't live)
+→ searches (5 results: agency, cooking guide, JS recipe blog, forum, news) →
+selects three → reads the agency page (Bacillus cereus spores survive cooking;
+the danger is warm storage, not reheating) → reads the cooking guide (agrees,
+adds cool-fast/fridge-within-an-hour) → **fetches the recipe blog → `unreadable`,
+JS-only shell (the GEO beat)** → synthesises (the myth vs the real risk) →
+answers with two citations pointing at the two pages it read. Forum + news are
+deliberately left unread — teaches selection. Citation offsets computed against
+the exact answer string (curly apostrophes) and asserted by the schema, so a
+copy edit that shifts them fails validation.
+
+**Deviation flagged (count):** the decisive 9-beat sheet asks for "~22–28
+events" but yields 13 honest ones at Ep-01 tightness. Padding to 24 would need
+hollow thinkings (violates the no-filler copy bar) or a second search (the brief
+says "one search, 5 results," marked decisive). I chose fidelity + no filler;
+easy to expand later via a refined follow-up search or a news-article fallback
+read if the owner wants the literal count.
+
+Verified: `pnpm test` 46 passing (was 31; +15 for 1.2), `pnpm trace:validate`
+all 6 green, `pnpm schema:build` idempotent + regenerated, full `pnpm build`
+green (all three existing pages still prerender; three.js still lazy). No UI yet
+— demo = read the reheat-rice trace as text.
