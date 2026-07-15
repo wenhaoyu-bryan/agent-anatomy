@@ -554,3 +554,60 @@ clean, full `pnpm build` green (four pages prerender now; ep02 initial JS ~21.5
 KB / 7.6 KB gz). Reduced-motion path = the existing 2D meter + the global
 transition-collapse (threads land in final state). Demo: play S5 to the end and
 watch the answer thread back to its two sources.
+
+### U3 — the funnel + scenes (this milestone)
+
+Three WebGL/scene pieces, all **dedicated in-flow Canvases** (the Ep 1.5 T3
+precedent — NOT Ep 01's tracked-overlay slot machinery), gated behind a shared
+`useGlReady()` (webgl + idle + not-reduced-motion; SSR renders neither):
+
+- **Hero ambient** (`HeroAmbient.tsx`) — reuses Ep 01's `SceneA` in its own
+  canvas, so the series reads as one identity.
+- **S3 funnel** (`FunnelCanvas.tsx` + `FunnelSection.tsx`) — the new WebGL work.
+  A tall section with a **CSS-sticky pin** (no GSAP, no scroll-jacking); a
+  rAF-throttled scroll handler writes progress 0→1 into a ref the scene reads
+  each frame. Choreography, all a pure function of progress: a field of 72
+  page-glyph planes (the web) → 10 brighten to cyan (results) → 3 are drawn
+  down to the window mouth (selected) → the other results recede → 900 instanced
+  fragments stream from the 3 into a bounded, hairline-edged **context window**
+  (the same box/particle language as Ep 01) and settle bottom-up. HDR flare
+  mid-flight → bloom; calm when settled.
+- **S4 reading figure** (`ReadingFigure.tsx`) — DOM/SVG, not WebGL: a readable
+  page → boilerplate falls away → fragment kept; beside it the JS-only shell
+  (`<div id="root">`) → nothing kept. Caption: "a page that can't be read can't
+  be cited."
+
+Also built **S2 cutoff** (`CutoffFigure.tsx`, DOM) — the sealed-archive-with-a-
+date idea, linking back to Ep 01's context window — even though the brief slots
+S2 under U4; it sits naturally before the funnel.
+
+Deviation flagged: the brief calls S3 "pinned, scroll-scrubbed." I used a
+CSS-`sticky` pin driven by a scroll handler rather than GSAP ScrollTrigger pin —
+simpler, no CJS/SSR import hazard (NOTES M3), and it degrades cleanly: reduced
+motion / no-WebGL / SSR render a compact **static** funnel diagram instead of a
+340vh scrubbed section (so no dead scroll for those users, and view-source shows
+the narrowing).
+
+Audit gate (review-animations + web-design; tier-3 skills still not registerable
+this session, ran the checklist manually):
+- **Fixed (medium):** both new canvases were `frameloop="always"` unconditionally
+  — they'd render offscreen. Added `IntersectionObserver` gating so the hero and
+  funnel frameloops go `never` once their section leaves the viewport (§8).
+- Motion: funnel is deterministic + scrub-safe (pure fn of progress, rewinds
+  clean); citation threads (U2) transition, not keyframe; reduced motion collapses
+  everything via the global block. No autoplay perpetual churn.
+- a11y: canvases `aria-hidden`; headings h1→h2; citations are focusable buttons
+  with aria-labels; source status is text ("read"/"✕ unread"/"found"), not
+  colour-only; skip link + focus-visible intact.
+- **Flagged, accepted:** `faviconHue` gives sources per-source hues — a mild step
+  outside §6's telemetry palette. Kept at moderate saturation, confined to small
+  chip dots + threads (the brief adds the field on purpose); the thread glow is a
+  soft blurred underlay, not neon. No glass/neumorph/aurora.
+
+Verified live (Playwright, preview): hero ambient renders (drift + loop motif);
+funnel scrubs through web → results → selected → window-fill at 0.45/0.66/0.82/
+0.93 and animates only while pinned (frameloop gating confirmed); S2/S4 figures
+render; **0 console errors** (2 warnings are three.js's `THREE.Clock` deprecation,
+also on Ep 01/1.5). Mobile 390×844: no horizontal overflow, replay tabs +
+sources panel work. Budget re-measured on the heaviest page (ep02, all scenes +
+three.js): **401 KB gz < 450** (§1) — no regression.

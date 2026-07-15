@@ -1,6 +1,10 @@
 import { traceSchema } from "../trace/schema";
 import { MotionRoot } from "../episode/scroll/MotionRoot";
 import { ReadingReplay } from "./ReadingReplay";
+import { HeroAmbient } from "./HeroAmbient";
+import { CutoffFigure } from "./CutoffFigure";
+import { FunnelSection } from "./FunnelSection";
+import { ReadingFigure } from "./ReadingFigure";
 import reheatRiceRaw from "../../traces/reheat-rice.trace.json";
 
 // Validated at load so a bad trace edit fails loudly in dev, like Episode 01.
@@ -28,6 +32,9 @@ export function Episode02() {
       </a>
       <main id="main">
         <Hero />
+        <CutoffFigure />
+        <FunnelSection />
+        <ReadingFigure />
         <ReadingReplay trace={reheatRice} />
         <Close />
       </main>
@@ -39,6 +46,7 @@ export function Episode02() {
 function Hero() {
   return (
     <section className="relative flex min-h-dvh flex-col justify-center overflow-hidden px-6">
+      <HeroAmbient />
       <div className="telemetry-grid pointer-events-none absolute inset-0 z-[2]" aria-hidden="true" />
       <div
         className="pointer-events-none absolute inset-0 z-[1]"
@@ -81,23 +89,41 @@ function Close() {
     <section id="debrief" aria-labelledby="debrief-title" className="px-4 py-28 md:px-6">
       <div className="mx-auto w-full max-w-4xl">
         <div className="reveal">
-          <p className="micro-label">The series</p>
+          <p className="micro-label">So how do you get cited?</p>
           <h2
             id="debrief-title"
-            className="mt-3 text-3xl font-medium tracking-tight text-balance md:text-4xl"
+            className="mt-3 max-w-2xl text-3xl font-medium tracking-tight text-balance md:text-4xl"
             style={{ fontFamily: "var(--font-display)" }}
           >
-            Three episodes, one engine
+            You just watched what the agent rewards
           </h2>
-          <p className="mt-5 max-w-2xl leading-relaxed text-[var(--color-muted)]">
-            Fixing a page, running out of memory, reading the web — three very different runs, all
-            played by the same replay engine from the same trace format. That&rsquo;s the point of the
-            format: write a run that fits the schema, and it plays.
+          <p className="mt-5 max-w-2xl leading-relaxed">
+            No secret to it — the whole mechanism was on screen. Three things decided which pages the
+            answer was built from.
+          </p>
+          <ul className="mt-6 flex max-w-2xl flex-col gap-4">
+            <Payoff n="01" head="It could read them">
+              The recipe blog rendered its content with JavaScript and came back empty. A page a
+              fetcher can&rsquo;t read is a page it can&rsquo;t cite. Plain, server-rendered HTML gets read.
+            </Payoff>
+            <Payoff n="02" head="It could extract them">
+              The pages that won put their answer in clear prose, near the top — not buried under menus
+              and preamble. Clear structure survives the trip into the window; filler falls away.
+            </Payoff>
+            <Payoff n="03" head="It trusted them">
+              Between two readable sources, the agent leaned on the one with substance — specific,
+              checkable claims — and cited that. Authority here meant the page that actually answered.
+            </Payoff>
+          </ul>
+          <p className="mt-6 max-w-2xl leading-relaxed text-[var(--color-muted)]">
+            People have a name for optimizing toward this — GEO — but there&rsquo;s little to game. Write
+            pages a person, and the machine reading on their behalf, can actually read.
           </p>
         </div>
 
-        <div className="reveal mt-12">
-          <ul className="flex flex-col gap-3">
+        <div className="reveal mt-16">
+          <p className="micro-label">The series</p>
+          <ul className="mt-4 flex flex-col gap-3">
             <SeriesLink
               href={EPISODE_01}
               n="01"
@@ -126,15 +152,27 @@ function Close() {
                 </div>
               </div>
             </li>
+            <li className="rounded-lg border border-dashed border-[var(--color-hairline)] px-5 py-4">
+              <div className="flex items-baseline gap-4">
+                <span className="shrink-0 font-mono tabular-nums text-[var(--color-muted)]">03</span>
+                <div className="flex items-center gap-3">
+                  <p className="font-medium" style={{ fontFamily: "var(--font-display)" }}>
+                    To be announced
+                  </p>
+                  <span className="micro-label">Planned</span>
+                </div>
+              </div>
+            </li>
           </ul>
         </div>
 
         <div className="reveal mt-12 rounded-lg border border-[var(--color-hairline)] bg-[var(--color-panel)]/40 px-5 py-6">
           <p className="micro-label">Open source</p>
           <p className="mt-3 leading-relaxed">
-            The <code className="font-mono text-sm">1.2</code> schema adds web search, page fetches,
-            and citations — and every earlier trace still plays unchanged. Write your own run and it
-            plays too.
+            Fixing a page, running out of memory, reading the web — three very different runs, all
+            played by one engine from one trace format. The <code className="font-mono text-sm">1.2</code>{" "}
+            schema adds web search, page fetches, and citations, and every earlier trace still plays
+            unchanged. Write your own run and it plays too.
           </p>
           <div className="mt-5 flex flex-wrap gap-3">
             <a
@@ -164,6 +202,20 @@ function Close() {
         </p>
       </div>
     </section>
+  );
+}
+
+function Payoff({ n, head, children }: { n: string; head: string; children: React.ReactNode }) {
+  return (
+    <li className="flex gap-4">
+      <span className="shrink-0 font-mono text-sm tabular-nums text-[var(--color-tool)]">{n}</span>
+      <div>
+        <p className="font-medium" style={{ fontFamily: "var(--font-display)" }}>
+          {head}
+        </p>
+        <p className="mt-1 leading-relaxed text-[var(--color-muted)]">{children}</p>
+      </div>
+    </li>
   );
 }
 
