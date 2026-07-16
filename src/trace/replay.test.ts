@@ -115,6 +115,76 @@ describe("createReplay — context eviction (v1.1)", () => {
   });
 });
 
+const retrievalTrace: Trace = {
+  version: "1.2",
+  meta: { id: "r", title: "r", description: "r", contextWindowTokens: 1000 },
+  tools: [
+    { name: "search_web", description: "search" },
+    { name: "fetch_page", description: "fetch" },
+  ],
+  sources: [
+    { sourceId: "s1", title: "S1", url: "s1", faviconHue: 10 },
+    { sourceId: "s2", title: "S2", url: "s2", faviconHue: 20 },
+  ],
+  initialArtifact: worldBefore,
+  events: [
+    { id: "a", type: "user_message", text: "q", tokens: 5 },
+    {
+      id: "b",
+      type: "search",
+      query: "q",
+      results: [
+        { sourceId: "s1", title: "S1", url: "s1", snippet: "x" },
+        { sourceId: "s2", title: "S2", url: "s2", snippet: "y" },
+      ],
+      tokens: 30,
+    },
+    { id: "c", type: "fetch", sourceId: "s1", url: "s1", status: "ok", extracted: "text", tokens: 100 },
+    { id: "d", type: "fetch", sourceId: "s2", url: "s2", status: "unreadable", tokens: 10 },
+    {
+      id: "e",
+      type: "assistant_message",
+      text: "answer",
+      tokens: 20,
+      citations: [{ spanStart: 0, spanEnd: 6, sourceIds: ["s1"] }],
+    },
+  ],
+};
+
+describe("createReplay — web retrieval source states (v1.2)", () => {
+  it("has no source states before the run and folds search/fetch tokens like any event", () => {
+    const replay = createReplay(retrievalTrace);
+    expect(replay.current().sourceStates).toEqual({});
+    // search (+30) and fetch (+100, +10) accumulate exactly like other events.
+    expect(replay.stateAt(1).tokensUsed).toBe(35);
+    expect(replay.stateAt(2).tokensUsed).toBe(135);
+    expect(replay.stateAt(4).tokensUsed).toBe(165);
+  });
+
+  it("moves each source through listed → read / unreadable", () => {
+    const replay = createReplay(retrievalTrace);
+    expect(replay.stateAt(1).sourceStates).toEqual({ s1: "listed", s2: "listed" });
+    expect(replay.stateAt(2).sourceStates).toEqual({ s1: "read", s2: "listed" });
+    expect(replay.stateAt(3).sourceStates).toEqual({ s1: "read", s2: "unreadable" });
+    expect(replay.stateAt(4).sourceStates).toEqual({ s1: "read", s2: "unreadable" });
+  });
+
+  it("gives each frame a fresh source-state object — scrubbing back is unpolluted", () => {
+    const replay = createReplay(retrievalTrace);
+    replay.seek(4);
+    expect(replay.stateAt(1).sourceStates).toEqual({ s1: "listed", s2: "listed" });
+  });
+});
+
+describe("createReplay — source states are empty for pre-1.2 traces", () => {
+  it("never populates sourceStates when there is no web retrieval", () => {
+    const replay = createReplay(trace);
+    for (let i = -1; i < replay.length; i++) {
+      expect(replay.stateAt(i).sourceStates).toEqual({});
+    }
+  });
+});
+
 describe("createReplay — navigation and bounds", () => {
   it("next/prev step the cursor and clamp at both ends", () => {
     const replay = createReplay(trace);

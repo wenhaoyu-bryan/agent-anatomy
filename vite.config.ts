@@ -14,6 +14,7 @@ export default defineConfig({
         landing: resolve(__dirname, "index.html"),
         episode: resolve(__dirname, "episodes/how-an-agent-works/index.html"),
         episode15: resolve(__dirname, "episodes/where-agents-go-wrong/index.html"),
+        episode02: resolve(__dirname, "episodes/how-ai-reads-the-web/index.html"),
       },
     },
   },

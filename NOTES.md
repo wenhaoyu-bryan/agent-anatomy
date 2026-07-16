@@ -429,3 +429,224 @@ Temp for capture: bumped `EVICT_DUR` to 14 to try to slow-mo the fall for the
 GIF, reverted to 2.2 before committing (grep-confirmed). A throwaway Vite server
 on :5199 was used for capture and killed; the owner's :5174 dev server is
 untouched.
+
+## Episode 02 — "How AI Reads the Web" (full episode; brief: EPISODE-02-BRIEF.md)
+
+Milestones U1–U4. Owner ran `/goal … until finished`, so I'm building through
+all four without stopping for sign-off; each milestone still gets its own commit
++ NOTES entry, and the U1 trace is surfaced for the owner to read as a screenplay.
+
+### U1 — schema 1.2 + reheat-rice trace (this milestone)
+
+Schema bumped to **1.2**, backward compatible (1.0 and 1.1 traces validate and
+render unchanged; a dedicated test replays all five prior traces and asserts
+their versions are untouched). Additions, all optional:
+
+- **`search` event** `{ query, results: {sourceId,title,url,snippet}[] }` and
+  **`fetch` event** `{ sourceId, url, status: "ok"|"unreadable", extracted? }`.
+- **Top-level `sources` registry** `{ sourceId, title, url, faviconHue }[]` —
+  declared once, referenced by every result/fetch/citation.
+- **`citations`** on `assistant_message` — half-open `[spanStart, spanEnd)` char
+  spans of the answer text bound to `sourceIds`.
+
+Token semantics (the risk I flagged, now resolved): `tokens` = what enters the
+window, so search/fetch fold `+tokens` exactly like every other event — **no
+engine token-fold change**. A `fetch ok` must carry `extracted` (the fragment
+that entered context); an `unreadable` fetch omits it and costs only the ~20
+tokens of an empty response. This keeps the existing `superRefine` fold and the
+`validate-traces` peak calc unchanged for the window math.
+
+Integrity rules added to `superRefine`, folding alongside the token math:
+- every referenced `sourceId` must be in the registry; registry ids unique;
+- citation spans satisfy `0 ≤ start < end ≤ text.length`;
+- **a source can only be cited once it's been fetched `ok` earlier** — a page
+  that can't be read can't be cited (S4's caption, encoded as a schema rule);
+- `search`/`fetch`/`citations`/`sources` are rejected in a 1.0 or 1.1 trace, so
+  the version field stays honest (mirrors the 1.1 gate).
+
+**Engine** (`replay.ts`): added `SourceStatus` + per-frame `sourceStates`
+(`listed` → `read`/`unreadable`), cloned fresh per frame so scrubbing is safe.
+Monotonic — a read source stays read even if its fragment is later evicted (the
+citation still points there; reheat-rice has no eviction anyway). Store exposes
+`sources` (the registry) as a selector; DOM reads live status off
+`frame.sourceStates`. `contextItems`/tokens/artifact logic untouched, so Ep 01
+and 1.5 are behaviorally unchanged (46 tests green, incl. the pre-1.2 traces).
+
+Exhaustive `event.type` sites updated so `tsc -b` stays green: `eventMeta.ts`
+(EVENT_META `SEARCH`/`FETCH` + `eventBody`), `palette.ts` (`categoryOf` →
+`tool`/cyan for both). Everything else reads via `EVENT_META[...]` lookups, so
+no other site needed touching.
+
+**The trace** (`traces/reheat-rice.trace.json`, 13 events, v1.2, window 4096,
+peak 1672): "Is it safe to reheat rice?" — asks → thinks (knowledge isn't live)
+→ searches (5 results: agency, cooking guide, JS recipe blog, forum, news) →
+selects three → reads the agency page (Bacillus cereus spores survive cooking;
+the danger is warm storage, not reheating) → reads the cooking guide (agrees,
+adds cool-fast/fridge-within-an-hour) → **fetches the recipe blog → `unreadable`,
+JS-only shell (the GEO beat)** → synthesises (the myth vs the real risk) →
+answers with two citations pointing at the two pages it read. Forum + news are
+deliberately left unread — teaches selection. Citation offsets computed against
+the exact answer string (curly apostrophes) and asserted by the schema, so a
+copy edit that shifts them fails validation.
+
+**Deviation flagged (count):** the decisive 9-beat sheet asks for "~22–28
+events" but yields 13 honest ones at Ep-01 tightness. Padding to 24 would need
+hollow thinkings (violates the no-filler copy bar) or a second search (the brief
+says "one search, 5 results," marked decisive). I chose fidelity + no filler;
+easy to expand later via a refined follow-up search or a news-article fallback
+read if the owner wants the literal count.
+
+Verified: `pnpm test` 46 passing (was 31; +15 for 1.2), `pnpm trace:validate`
+all 6 green, `pnpm schema:build` idempotent + regenerated, full `pnpm build`
+green (all three existing pages still prerender; three.js still lazy). No UI yet
+— demo = read the reheat-rice trace as text.
+
+### U2 — replay rig extension (this milestone)
+
+New episode page `episodes/how-ai-reads-the-web/` (`src/episode02/`), wired like
+Ep 1.5: `vite.config` input, `entry-server.renderEpisode02`, `prerender.ts`
+injection, and a body-only CI grep ("an answer assembles with visible", chosen
+so it doesn't also appear in og:title). Hero + S5 replay + a minimal series-index
+close; S2/S3/S4 scenes and the full S6 close come in U3/U4.
+
+**S5 rig** (`ReadingReplay.tsx`): Ep-01's three-panel rig reused via a
+`ReplayProvider` bound to the reheat-rice trace, driving the shared `Controls`,
+`Timeline`, `LoopIndicator`, `TranscriptPanel`, `ContextMeter2D`. Layout is
+**2-over-1**, not 3-across: transcript + context meter in a row, then the
+sources+answer showpiece **full-width below**. Reason (flagged deviation): with
+the panel as a narrow third column the citation threads bunched into a vertical
+band; giving the showpiece full width lets the threads arc horizontally
+(answer left → source chips right), which is the whole point of the share clip.
+Mobile keeps the tabbed one-panel-at-a-time pattern (verbatim from
+`ReplaySection`), with the sources panel stacking chips-over-answer.
+
+**`SourcesAnswerPanel.tsx`** — the new third panel, DOM/SVG only (no WebGL):
+- Source chips read `frame.sourceStates` (the v1.2 engine field): appear as the
+  search lists them ("found"), light with a hued dot + glow when read, and
+  strike through + dim with "✕ unread" when unreadable (the blog). `faviconHue`
+  drives each chip's dot/thread colour.
+- When the answer arrives, its text renders with cited spans as inline
+  `<button>`s (native focus + tap), and **SVG citation threads** are measured
+  from the live layout (`getBoundingClientRect` relative to the panel, so they
+  track scroll/resize + a `document.fonts.ready` re-measure) and drawn on with
+  `pathLength=1` + `stroke-dashoffset 1→0`, staggered per citation — "the answer
+  assembling with threads reaching back." Hover/focus a citation (or later a
+  chip) highlights its thread group and dims the rest.
+- Verified live (Playwright, preview build): jump-to-end → 5 chips in the right
+  states (nfsa/kitchen-basics read, quickbite ✕ unread, cooktalk/daily-ledger
+  found), 3 threads (span A→nfsa; span B→kitchen-basics + nfsa) fully drawn
+  (dashoffset 0), 2 keyboard-focusable citations, focus on span A dims the
+  other group to 0.18, **0 console errors/warnings** (clean hydration).
+
+Shared-component touch: `TranscriptPanel.EventText` now renders `search` (query
++ result count, muted) and `fetch` (ok → "Read {url}" + the extracted fragment
+in a cyan-ruled quote; unreadable → a coral "Couldn't read" note). Ep 01/1.5
+never carry these types, so they're unaffected.
+
+Design note for the U4 audit: `faviconHue` introduces per-source hues, a mild
+departure from §6's strict telemetry palette. Kept at moderate saturation and
+confined to small chip dots + the threads (the brief explicitly adds the field);
+the luminous thread is a soft blurred underlay, not neon — no glass/neumorph/
+aurora. Flagged here for the review-animations + web-design gate in U4.
+
+Verified: `pnpm test` 46 green, `pnpm trace:validate` 6 green, schema diff
+clean, full `pnpm build` green (four pages prerender now; ep02 initial JS ~21.5
+KB / 7.6 KB gz). Reduced-motion path = the existing 2D meter + the global
+transition-collapse (threads land in final state). Demo: play S5 to the end and
+watch the answer thread back to its two sources.
+
+### U3 — the funnel + scenes (this milestone)
+
+Three WebGL/scene pieces, all **dedicated in-flow Canvases** (the Ep 1.5 T3
+precedent — NOT Ep 01's tracked-overlay slot machinery), gated behind a shared
+`useGlReady()` (webgl + idle + not-reduced-motion; SSR renders neither):
+
+- **Hero ambient** (`HeroAmbient.tsx`) — reuses Ep 01's `SceneA` in its own
+  canvas, so the series reads as one identity.
+- **S3 funnel** (`FunnelCanvas.tsx` + `FunnelSection.tsx`) — the new WebGL work.
+  A tall section with a **CSS-sticky pin** (no GSAP, no scroll-jacking); a
+  rAF-throttled scroll handler writes progress 0→1 into a ref the scene reads
+  each frame. Choreography, all a pure function of progress: a field of 72
+  page-glyph planes (the web) → 10 brighten to cyan (results) → 3 are drawn
+  down to the window mouth (selected) → the other results recede → 900 instanced
+  fragments stream from the 3 into a bounded, hairline-edged **context window**
+  (the same box/particle language as Ep 01) and settle bottom-up. HDR flare
+  mid-flight → bloom; calm when settled.
+- **S4 reading figure** (`ReadingFigure.tsx`) — DOM/SVG, not WebGL: a readable
+  page → boilerplate falls away → fragment kept; beside it the JS-only shell
+  (`<div id="root">`) → nothing kept. Caption: "a page that can't be read can't
+  be cited."
+
+Also built **S2 cutoff** (`CutoffFigure.tsx`, DOM) — the sealed-archive-with-a-
+date idea, linking back to Ep 01's context window — even though the brief slots
+S2 under U4; it sits naturally before the funnel.
+
+Deviation flagged: the brief calls S3 "pinned, scroll-scrubbed." I used a
+CSS-`sticky` pin driven by a scroll handler rather than GSAP ScrollTrigger pin —
+simpler, no CJS/SSR import hazard (NOTES M3), and it degrades cleanly: reduced
+motion / no-WebGL / SSR render a compact **static** funnel diagram instead of a
+340vh scrubbed section (so no dead scroll for those users, and view-source shows
+the narrowing).
+
+Audit gate (review-animations + web-design; tier-3 skills still not registerable
+this session, ran the checklist manually):
+- **Fixed (medium):** both new canvases were `frameloop="always"` unconditionally
+  — they'd render offscreen. Added `IntersectionObserver` gating so the hero and
+  funnel frameloops go `never` once their section leaves the viewport (§8).
+- Motion: funnel is deterministic + scrub-safe (pure fn of progress, rewinds
+  clean); citation threads (U2) transition, not keyframe; reduced motion collapses
+  everything via the global block. No autoplay perpetual churn.
+- a11y: canvases `aria-hidden`; headings h1→h2; citations are focusable buttons
+  with aria-labels; source status is text ("read"/"✕ unread"/"found"), not
+  colour-only; skip link + focus-visible intact.
+- **Flagged, accepted:** `faviconHue` gives sources per-source hues — a mild step
+  outside §6's telemetry palette. Kept at moderate saturation, confined to small
+  chip dots + threads (the brief adds the field on purpose); the thread glow is a
+  soft blurred underlay, not neon. No glass/neumorph/aurora.
+
+Verified live (Playwright, preview): hero ambient renders (drift + loop motif);
+funnel scrubs through web → results → selected → window-fill at 0.45/0.66/0.82/
+0.93 and animates only while pinned (frameloop gating confirmed); S2/S4 figures
+render; **0 console errors** (2 warnings are three.js's `THREE.Clock` deprecation,
+also on Ep 01/1.5). Mobile 390×844: no horizontal overflow, replay tabs +
+sources panel work. Budget re-measured on the heaviest page (ep02, all scenes +
+three.js): **401 KB gz < 450** (§1) — no regression.
+
+### U4 — copy, polish, ship (this milestone)
+
+Most narrative copy landed with its section in U1–U3 (hero, funnel captions, S4
+figure, S6 close). U4 = the peripheral ship work:
+
+- **Landing** flipped: Ep 02 card now LIVE with link + blurb; added an Ep 03
+  "Planned" slot to keep the series shape (03 now the dimmed slot, not 02).
+- **S6 close** (written in U3's commit) — the "So how do you get cited?" payoff,
+  ~150 words derived only from what the reader watched (read it / extract it /
+  trust it), GEO named once, no pitch; then the series index with Ep 03 planned.
+  Gets the brief's extra editing pass — reads as explanation, not marketing.
+- **llms.txt**: added the Ep 02 summary + page link, and rewrote the schema line
+  for 1.2 (search/fetch/sources/citations) + "three episodes, one engine."
+- **README**: new Episode 02 section (funnel / reading / replay bullets) with the
+  citation-threads GIF, and the "three episodes, one engine, one backward-
+  compatible format" line; the "second consumer" phrasing retired.
+- **docs/launch.md**: third-launch section — an X thread (citation-clip-first) and
+  a **LinkedIn post aimed at the marketing/SEO/GEO audience** (the second persona
+  the brief calls for), plus the citation-clip recording recipe.
+- **OG image** (`public/og/episode-02.png`, 1200×630): a token-styled card
+  reusing the Ep 01/1.5 card layout (Space Grotesk head, IBM Plex Mono labels, §6
+  palette, vignette) with the S5 motif — a short answer whose two spans thread to
+  two "read" source chips, the JS blog struck through, a "found" forum. Built from
+  an HTML card, screenshotted via Playwright.
+- **citations GIF** (`docs/media/citations.gif`, 900px, ~114 KB): four real frames
+  captured from the S5 panel — sources found → read (one ✕) → answer + threads
+  drawn → a citation hovered — assembled with ffmpeg (concat + two-pass palette).
+  Stepped telling like the eviction GIF; a live screen recording per launch.md
+  will read smoother for the actual post.
+
+Reduced-motion + mobile re-checked (Playwright): no horizontal overflow at 390px,
+replay tabs + sources threads work stacked, funnel falls back to the static
+diagram. §1 budget re-measured on all three episodes — ep02 (heaviest) 401 KB gz,
+under 450, no regression to Ep 01/1.5.
+
+Verified: `pnpm test` 46 green, `pnpm trace:validate` 6 green, schema diff clean,
+full `pnpm build` green (four pages prerender), CI greps pass. Episode 02 is
+feature-complete on `feature/episode-02`.

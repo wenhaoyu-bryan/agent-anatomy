@@ -35,6 +35,9 @@ export function categoryOf(type: TraceEvent["type"]): Category {
       return "thinking";
     case "tool_call":
     case "tool_result":
+    case "search":
+    case "fetch":
+      // Web retrieval is tool activity — cyan, like every other tool call/result.
       return "tool";
     case "assistant_message":
       return "assistant";

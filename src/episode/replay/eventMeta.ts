@@ -12,6 +12,8 @@ export const EVENT_META: Record<TraceEvent["type"], { label: string; color: stri
   tool_result: { label: "RESULT", color: "var(--color-tool)" },
   assistant_message: { label: "REPLY", color: "var(--color-success)" },
   context_evicted: { label: "EVICT", color: "var(--color-muted)" },
+  search: { label: "SEARCH", color: "var(--color-tool)" },
+  fetch: { label: "FETCH", color: "var(--color-tool)" },
 };
 
 export function eventBody(event: TraceEvent): string {
@@ -30,6 +32,14 @@ export function eventBody(event: TraceEvent): string {
       const n = event.evictedEventIds.length;
       return `Dropped ${n} earlier ${n === 1 ? "item" : "items"} from the window to free space.`;
     }
+    case "search": {
+      const n = event.results.length;
+      return `Searched "${event.query}" — ${n} ${n === 1 ? "result" : "results"}.`;
+    }
+    case "fetch":
+      return event.status === "unreadable"
+        ? `Couldn't read ${event.url} — the page returned no readable text.`
+        : (event.extracted ?? `Read ${event.url}.`);
   }
 }
 

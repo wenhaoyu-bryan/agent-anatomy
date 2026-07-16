@@ -1,7 +1,7 @@
 import { create, useStore, type StoreApi } from "zustand";
 import { createContext, createElement, useContext, useRef, type ReactNode } from "react";
 import { createReplay, type ReplayFrame } from "../../trace/replay";
-import { traceSchema, type Trace } from "../../trace/schema";
+import { traceSchema, type SourceEntry, type Trace } from "../../trace/schema";
 import rawTrace from "../../../traces/fix-broken-page.trace.json";
 
 export interface ReplayStore {
@@ -11,6 +11,8 @@ export interface ReplayStore {
   playing: boolean;
   length: number;
   windowTokens: number;
+  /** The source registry (v1.2) — empty for traces without web retrieval. */
+  sources: SourceEntry[];
   next: () => void;
   prev: () => void;
   seek: (index: number) => void;
@@ -35,6 +37,7 @@ export function makeReplayStore(trace: Trace): StoreApi<ReplayStore> {
       playing: false,
       length: replay.length,
       windowTokens: trace.meta.contextWindowTokens,
+      sources: trace.sources ?? [],
       next: () => {
         replay.pause();
         replay.next();

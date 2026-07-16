@@ -1,0 +1,183 @@
+{
+  "version": "1.2",
+  "meta": {
+    "id": "reheat-rice",
+    "title": "Is it safe to reheat rice?",
+    "description": "Asked a question its training can't answer with confidence, an agent searches the web, weighs five results, reads the two most authoritative, hits one page it can't read at all, and writes a short answer with citations back to the sources it trusted. Token counts are hand-tuned estimates.",
+    "contextWindowTokens": 4096
+  },
+  "tools": [
+    {
+      "name": "search_web",
+      "description": "Search the web and get back a list of pages with titles and snippets."
+    },
+    {
+      "name": "fetch_page",
+      "description": "Open one page and read its text."
+    }
+  ],
+  "sources": [
+    {
+      "sourceId": "nfsa",
+      "title": "Reheating rice safely — National Food Standards Agency",
+      "url": "foodstandards.gov.example/rice-safety",
+      "faviconHue": 210
+    },
+    {
+      "sourceId": "kitchen-basics",
+      "title": "How to store and reheat rice without getting sick",
+      "url": "kitchenbasics.example/reheating-rice",
+      "faviconHue": 30
+    },
+    {
+      "sourceId": "quickbite-blog",
+      "title": "The best fried rice starts with leftovers",
+      "url": "quickbite.example/best-fried-rice",
+      "faviconHue": 320
+    },
+    {
+      "sourceId": "cooktalk",
+      "title": "Is it safe to reheat rice? — CookTalk forum thread",
+      "url": "cooktalk.example/thread/reheat-rice",
+      "faviconHue": 150
+    },
+    {
+      "sourceId": "daily-ledger",
+      "title": "Health officials warn about leftover rice",
+      "url": "dailyledger.example/leftover-rice",
+      "faviconHue": 45
+    }
+  ],
+  "initialArtifact": {
+    "kind": "webpage",
+    "files": {
+      "note.txt": "This run doesn't edit a webpage — the agent is answering a question by reading the web. The panel shows the sources and the answer instead."
+    },
+    "renderId": "sources-answer"
+  },
+  "events": [
+    {
+      "id": "e01",
+      "type": "system_prompt",
+      "summary": "You are a helpful assistant. When a question needs current or high-stakes facts, search the web, read the most trustworthy sources, and cite them in your answer.",
+      "tokens": 260
+    },
+    {
+      "id": "e02",
+      "type": "user_message",
+      "text": "Is it actually safe to reheat rice? I keep hearing you can get food poisoning from it.",
+      "tokens": 30
+    },
+    {
+      "id": "e03",
+      "type": "thinking",
+      "text": "This is a food-safety question, and the stakes are real, so I don't want to answer from memory — official advice like this gets updated, and I might be out of date. I'll search for current guidance and read it directly.",
+      "tokens": 58
+    },
+    {
+      "id": "e04",
+      "type": "search",
+      "query": "is it safe to reheat rice food safety",
+      "results": [
+        {
+          "sourceId": "nfsa",
+          "title": "Reheating rice safely — National Food Standards Agency",
+          "url": "foodstandards.gov.example/rice-safety",
+          "snippet": "Official guidance on why cooked rice can cause illness if it's left out, and how to store and reheat it safely."
+        },
+        {
+          "sourceId": "kitchen-basics",
+          "title": "How to store and reheat rice without getting sick",
+          "url": "kitchenbasics.example/reheating-rice",
+          "snippet": "A step-by-step guide to cooling, refrigerating, and reheating leftover rice, with the science explained plainly."
+        },
+        {
+          "sourceId": "quickbite-blog",
+          "title": "The best fried rice starts with leftovers",
+          "url": "quickbite.example/best-fried-rice",
+          "snippet": "Our reader-favorite fried rice recipe, plus tips for getting the perfect texture from day-old rice."
+        },
+        {
+          "sourceId": "cooktalk",
+          "title": "Is it safe to reheat rice? — CookTalk forum thread",
+          "url": "cooktalk.example/thread/reheat-rice",
+          "snippet": "142 replies — \"my grandmother always reheated rice and was fine\", \"you'll poison yourself\", \"depends how you store it\"."
+        },
+        {
+          "sourceId": "daily-ledger",
+          "title": "Health officials warn about leftover rice",
+          "url": "dailyledger.example/leftover-rice",
+          "snippet": "A short news item summarizing recent advice on cooked rice, with a quote from a food-safety expert."
+        }
+      ],
+      "tokens": 210
+    },
+    {
+      "id": "e05",
+      "type": "thinking",
+      "text": "Five results. The food standards agency and the how-to guide both look specific and trustworthy — those are worth reading in full. The recipe blog is about cooking fried rice, not safety; the forum thread is people guessing; the news item only summarizes someone else. I'll read the agency page and the guide, and open the recipe blog too in case it has real detail.",
+      "tokens": 88
+    },
+    {
+      "id": "e06",
+      "type": "fetch",
+      "sourceId": "nfsa",
+      "url": "foodstandards.gov.example/rice-safety",
+      "status": "ok",
+      "extracted": "Uncooked rice can carry spores of Bacillus cereus, a bacterium. The spores survive cooking. If cooked rice is then left standing at room temperature, the spores grow into bacteria that produce a toxin — and reheating does not destroy that toxin. So reheating is not the hazard; leaving rice warm for too long is. Guidance: serve rice soon after cooking, or cool it quickly — ideally within one hour — and refrigerate. Eat within a day, and reheat only once, until it is steaming hot throughout.",
+      "tokens": 340
+    },
+    {
+      "id": "e07",
+      "type": "thinking",
+      "text": "That's the heart of it: the spores survive cooking, and the real danger is rice sitting warm afterward, not the reheating itself. Let me confirm the storage details against the how-to guide.",
+      "tokens": 44
+    },
+    {
+      "id": "e08",
+      "type": "fetch",
+      "sourceId": "kitchen-basics",
+      "url": "kitchenbasics.example/reheating-rice",
+      "status": "ok",
+      "extracted": "The risk with rice isn't the reheating — it's the gap between cooking and the fridge. To cool rice fast, spread it out on a wide plate or tray instead of leaving it deep in a hot pot. Get it into the refrigerator within an hour. Keep it no longer than a day, and when you reheat, make sure it's piping hot all the way through. Do that and reheated rice is perfectly safe.",
+      "tokens": 280
+    },
+    {
+      "id": "e09",
+      "type": "thinking",
+      "text": "The guide agrees completely and adds the practical part: cool it fast by spreading it out, fridge it within the hour, eat it within a day. Two independent sources telling the same story.",
+      "tokens": 46
+    },
+    {
+      "id": "e10",
+      "type": "fetch",
+      "sourceId": "quickbite-blog",
+      "url": "quickbite.example/best-fried-rice",
+      "status": "unreadable",
+      "tokens": 20
+    },
+    {
+      "id": "e11",
+      "type": "thinking",
+      "text": "The recipe blog came back empty — the page builds its content with JavaScript that my fetcher doesn't run, so there's no text for me to read. No matter: the two sources I already trust agree with each other. I'll leave the blog out.",
+      "tokens": 60,
+      "annotation": "A page that can't be read can't be cited."
+    },
+    {
+      "id": "e12",
+      "type": "thinking",
+      "text": "I have enough to answer. Both readable sources make the same point, and it corrects the common worry: people blame reheating rice, but the real risk is leaving it at room temperature after it's cooked. Stored properly, reheating is fine. I'll keep the answer short and cite the two pages I actually read.",
+      "tokens": 66
+    },
+    {
+      "id": "e13",
+      "type": "assistant_message",
+      "text": "Short version: reheating rice is safe — as long as it was stored properly first. Here’s what’s actually going on. Uncooked rice carries bacterial spores that survive cooking; the real danger isn’t reheating, it’s cooked rice left sitting warm, where those spores grow and produce a toxin. So the rule is simple: cool leftover rice quickly, refrigerate it within an hour, keep it no more than a day, and reheat it until it’s steaming hot — just once. Reheating was never the problem. Storage is.",
+      "tokens": 170,
+      "citations": [
+        { "spanStart": 175, "spanEnd": 287, "sourceIds": ["nfsa"] },
+        { "spanStart": 312, "spanEnd": 436, "sourceIds": ["kitchen-basics", "nfsa"] }
+      ]
+    }
+  ]
+}

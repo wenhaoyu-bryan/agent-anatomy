@@ -85,14 +85,41 @@ export function TranscriptPanel() {
 }
 
 function EventText({ event }: { event: TraceEvent }) {
-  const body = eventBody(event);
   if (event.type === "tool_result") {
     return (
       <pre className="mt-1.5 overflow-x-auto font-mono text-xs leading-relaxed whitespace-pre-wrap text-[var(--color-muted)]">
-        {body}
+        {eventBody(event)}
       </pre>
     );
   }
+  // Web retrieval (v1.2): a search shows its query; a fetch shows the fragment
+  // it read, or that it couldn't read the page at all (the GEO beat).
+  if (event.type === "search") {
+    return (
+      <p className="mt-1.5 font-mono text-[13px] leading-relaxed text-[var(--color-muted)]">
+        Searched &ldquo;{event.query}&rdquo; — {event.results.length} results.
+      </p>
+    );
+  }
+  if (event.type === "fetch") {
+    if (event.status === "unreadable") {
+      return (
+        <p className="mt-1.5 font-mono text-[13px] leading-relaxed text-[var(--color-muted)]">
+          <span className="text-[var(--color-user)]">Couldn&rsquo;t read</span> {event.url} — the page
+          returned no readable text.
+        </p>
+      );
+    }
+    return (
+      <div className="mt-1.5">
+        <p className="font-mono text-[11px] text-[var(--color-muted)]">Read {event.url}</p>
+        <p className="mt-1 border-l border-[var(--color-tool)]/40 pl-2 font-mono text-[13px] leading-relaxed text-[var(--color-ink)]">
+          {event.extracted}
+        </p>
+      </div>
+    );
+  }
+  const body = eventBody(event);
   const isVoice = event.type !== "tool_call" && event.type !== "context_evicted";
   return (
     <p

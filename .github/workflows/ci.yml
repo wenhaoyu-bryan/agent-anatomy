@@ -24,4 +24,5 @@ jobs:
       # Prerender must ship the essay text (view-source requirement, PLAN §8).
       - run: grep -q "What happens when you give an AI a task" dist/episodes/how-an-agent-works/index.html
       - run: grep -q "Two ideas carry this episode" dist/episodes/where-agents-go-wrong/index.html
+      - run: grep -q "an answer assembles with visible" dist/episodes/how-ai-reads-the-web/index.html
       - run: grep -q "Interactive explainers" dist/index.html

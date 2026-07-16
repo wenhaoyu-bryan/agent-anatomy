@@ -9,17 +9,23 @@ import { z } from "zod";
  * - `tool_result.artifact` is a FULL snapshot of the world, not a diff —
  *   snapshots keep the engine trivial and timeline scrubbing instant.
  *
- * Versions (backward compatible — a 1.0 trace still validates and renders):
+ * Versions (backward compatible — a 1.0 or 1.1 trace still validates and
+ * renders unchanged):
  * - 1.0: the six original event types.
  * - 1.1: adds the `context_evicted` event (drops earlier items out of the
- *   window when it fills) and an optional `annotation` on any event. Both are
- *   rejected in a trace that still declares `version: "1.0"`, so the version
- *   field stays honest.
+ *   window when it fills) and an optional `annotation` on any event.
+ * - 1.2: adds web retrieval — a `search` event, a `fetch` event (which may
+ *   come back "unreadable"), an optional top-level `sources` registry, and
+ *   optional `citations` on `assistant_message` binding answer spans to the
+ *   sources they came from.
+ *
+ * Each newer version's features are rejected in a trace that still declares an
+ * older version, so the version field always tells the truth about the file.
  */
 
 export const toolDefSchema = z
   .object({
-    /** e.g. "read_file", "edit_file", "render_page" */
+    /** e.g. "read_file", "edit_file", "search_web" */
     name: z.string().min(1),
     /** One plain-English line, rendered in the toolbox panel. */
     description: z.string().min(1),
@@ -37,6 +43,44 @@ export const artifactStateSchema = z
      * Resolved by a React component switch, not screenshots.
      */
     renderId: z.string().min(1),
+  })
+  .strict();
+
+/**
+ * A source the agent can find, read, and cite (v1.2). The top-level `sources`
+ * registry declares every source once so panels render its chip consistently;
+ * search results, fetches, and citations all reference it by `sourceId`.
+ */
+export const sourceEntrySchema = z
+  .object({
+    sourceId: z.string().min(1),
+    title: z.string().min(1),
+    /** Display URL — invented, plausible; the trace never fetches live. */
+    url: z.string().min(1),
+    /** 0–360 hue for the source chip, so each source reads distinct. */
+    faviconHue: z.number().int().min(0).max(360),
+  })
+  .strict();
+
+/** One hit inside a `search` event's results (v1.2). References the registry. */
+export const searchResultSchema = z
+  .object({
+    sourceId: z.string().min(1),
+    title: z.string().min(1),
+    url: z.string().min(1),
+    snippet: z.string().min(1),
+  })
+  .strict();
+
+/**
+ * A citation on an `assistant_message` (v1.2): the half-open character span
+ * `[spanStart, spanEnd)` of the answer text, and the source(s) it came from.
+ */
+export const citationSchema = z
+  .object({
+    spanStart: z.number().int().nonnegative(),
+    spanEnd: z.number().int().positive(),
+    sourceIds: z.array(z.string().min(1)).min(1),
   })
   .strict();
 
@@ -76,7 +120,13 @@ export const traceEventSchema = z.discriminatedUnion("type", [
     })
     .strict(),
   z
-    .object({ ...eventBase, type: z.literal("assistant_message"), text: z.string().min(1) })
+    .object({
+      ...eventBase,
+      type: z.literal("assistant_message"),
+      text: z.string().min(1),
+      /** Spans of `text` bound to their sources (v1.2). */
+      citations: z.array(citationSchema).min(1).optional(),
+    })
     .strict(),
   z
     .object({
@@ -91,11 +141,34 @@ export const traceEventSchema = z.discriminatedUnion("type", [
       tokens: z.number().int().nonnegative(),
     })
     .strict(),
+  z
+    .object({
+      ...eventBase,
+      type: z.literal("search"),
+      /** The query the agent ran (v1.2). */
+      query: z.string().min(1),
+      /** Results surfaced, each referencing a registry source. */
+      results: z.array(searchResultSchema).min(1),
+    })
+    .strict(),
+  z
+    .object({
+      ...eventBase,
+      type: z.literal("fetch"),
+      /** The source being read (v1.2), referencing the registry. */
+      sourceId: z.string().min(1),
+      url: z.string().min(1),
+      /** "unreadable" is the GEO beat — a page that returned no readable text. */
+      status: z.enum(["ok", "unreadable"]),
+      /** The fragment that entered context. Required for "ok", forbidden otherwise. */
+      extracted: z.string().min(1).optional(),
+    })
+    .strict(),
 ]);
 
 export const traceSchema = z
   .object({
-    version: z.enum(["1.0", "1.1"]),
+    version: z.enum(["1.0", "1.1", "1.2"]),
     meta: z
       .object({
         id: z.string().min(1),
@@ -107,6 +180,8 @@ export const traceSchema = z
       .strict(),
     /** Tools available to the agent in this run. */
     tools: z.array(toolDefSchema).min(1),
+    /** Sources the agent can find/read/cite (v1.2). Declared once, referenced by id. */
+    sources: z.array(sourceEntrySchema).optional(),
     initialArtifact: artifactStateSchema,
     events: z.array(traceEventSchema).min(1),
   })
@@ -114,14 +189,40 @@ export const traceSchema = z
   .superRefine((trace, ctx) => {
     const toolNames = new Set(trace.tools.map((tool) => tool.name));
     const isV10 = trace.version === "1.0";
+    const isPre12 = trace.version === "1.0" || trace.version === "1.1";
+
+    const declaredSources = new Set((trace.sources ?? []).map((source) => source.sourceId));
+
+    // A top-level sources registry is a 1.2 feature; keep the version honest.
+    if (isPre12 && trace.sources !== undefined) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["sources"],
+        message: `a "sources" registry requires version "1.2"`,
+      });
+    }
+    // Registry ids must be unique so a chip never renders twice.
+    const seenSourceIds = new Set<string>();
+    (trace.sources ?? []).forEach((source, i) => {
+      if (seenSourceIds.has(source.sourceId)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["sources", i, "sourceId"],
+          message: `duplicate source id "${source.sourceId}"`,
+        });
+      }
+      seenSourceIds.add(source.sourceId);
+    });
 
     // Fold the run exactly as the replay engine does: normal events enter the
     // window (+tokens), an eviction drops earlier events out of it (−tokens).
     // Validating on the same fold guarantees the checker and the renderer can
-    // never disagree about what fits.
+    // never disagree about what fits. The fold also tracks which sources have
+    // been read "ok" so far — a source can only be cited once it's been read.
     const seenIds = new Set<string>();
     const tokensById = new Map<string, number>();
     const liveIds = new Set<string>();
+    const readOk = new Set<string>();
     let running = 0;
 
     trace.events.forEach((event, i) => {
@@ -133,18 +234,74 @@ export const traceSchema = z
       seenIds.add(event.id);
       tokensById.set(event.id, event.tokens);
 
-      // The version field stays honest: 1.1-only features can't appear in a 1.0 trace.
+      // The version field stays honest: newer features can't appear in an older trace.
       if (isV10 && event.type === "context_evicted") {
         flag(["type"], `"context_evicted" requires version "1.1"`);
       }
       if (isV10 && event.annotation !== undefined) {
         flag(["annotation"], `"annotation" requires version "1.1"`);
       }
+      if (isPre12 && (event.type === "search" || event.type === "fetch")) {
+        flag(["type"], `"${event.type}" requires version "1.2"`);
+      }
+      if (isPre12 && event.type === "assistant_message" && event.citations !== undefined) {
+        flag(["citations"], `"citations" requires version "1.2"`);
+      }
 
       if (event.type === "tool_call" || event.type === "tool_result") {
         if (!toolNames.has(event.tool)) {
           flag(["tool"], `tool "${event.tool}" is not declared in tools[]`);
         }
+      }
+
+      if (event.type === "search") {
+        event.results.forEach((result, j) => {
+          if (!declaredSources.has(result.sourceId)) {
+            flag(
+              ["results", j, "sourceId"],
+              `references source "${result.sourceId}", which is not declared in sources[]`,
+            );
+          }
+        });
+      }
+
+      if (event.type === "fetch") {
+        if (!declaredSources.has(event.sourceId)) {
+          flag(["sourceId"], `references source "${event.sourceId}", which is not declared in sources[]`);
+        }
+        if (event.status === "ok" && event.extracted === undefined) {
+          flag(["extracted"], `a fetch with status "ok" must carry the "extracted" fragment`);
+        }
+        if (event.status === "unreadable" && event.extracted !== undefined) {
+          flag(["extracted"], `a fetch with status "unreadable" extracted nothing — omit "extracted"`);
+        }
+        if (event.status === "ok") readOk.add(event.sourceId);
+      }
+
+      if (event.type === "assistant_message" && event.citations) {
+        event.citations.forEach((citation, j) => {
+          if (citation.spanStart >= citation.spanEnd) {
+            flag(["citations", j], `spanStart (${citation.spanStart}) must be < spanEnd (${citation.spanEnd})`);
+          }
+          if (citation.spanEnd > event.text.length) {
+            flag(
+              ["citations", j, "spanEnd"],
+              `spanEnd ${citation.spanEnd} runs past the answer text (length ${event.text.length})`,
+            );
+          }
+          citation.sourceIds.forEach((sourceId, k) => {
+            if (!declaredSources.has(sourceId)) {
+              flag(["citations", j, "sourceIds", k], `cites "${sourceId}", which is not declared in sources[]`);
+            } else if (!readOk.has(sourceId)) {
+              // The episode's thesis, enforced by the schema: a page that
+              // wasn't read "ok" earlier can't be cited.
+              flag(
+                ["citations", j, "sourceIds", k],
+                `cites "${sourceId}", which was never fetched "ok" before this answer`,
+              );
+            }
+          });
+        });
       }
 
       if (event.type === "context_evicted") {
@@ -188,5 +345,8 @@ export const traceSchema = z
 
 export type ToolDef = z.infer<typeof toolDefSchema>;
 export type ArtifactState = z.infer<typeof artifactStateSchema>;
+export type SourceEntry = z.infer<typeof sourceEntrySchema>;
+export type SearchResult = z.infer<typeof searchResultSchema>;
+export type Citation = z.infer<typeof citationSchema>;
 export type TraceEvent = z.infer<typeof traceEventSchema>;
 export type Trace = z.infer<typeof traceSchema>;

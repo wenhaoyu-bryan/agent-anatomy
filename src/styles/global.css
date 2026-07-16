@@ -116,6 +116,34 @@ input[type="range"] {
   transform: scale(0.96);
 }
 
+/*
+ * Episode 02 — source chips appear as the agent searches; citation threads
+ * draw on (pathLength=1, dashoffset 1→0) as the answer assembles. The
+ * reduced-motion block below collapses both to an instant final state.
+ */
+.source-chip {
+  transition:
+    opacity 240ms var(--ease-mechanical),
+    border-color 240ms ease,
+    background-color 240ms ease;
+  @starting-style {
+    opacity: 0;
+  }
+}
+.cite-thread {
+  transition: stroke-dashoffset 850ms var(--ease-mechanical);
+}
+@keyframes cite-answer-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
