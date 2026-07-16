@@ -145,3 +145,76 @@ The share moment is F2 (Failure 02 · Context overflow):
    and fading out the bottom as the meter drops (~98% → ~68%), and the transcript
    delivering the confidently-wrong answer.
 3. Stop once the post-eviction reply lands. ~12–15s, no editing.
+
+---
+
+# Third launch — Episode 02 ("How AI reads the web")
+
+This episode has a second audience: the marketer / site-owner who wants to know
+why AI cites some pages and not others. Lead the X thread with the citation-thread
+clip (the answer assembling with lines back to its sources); run a separate
+LinkedIn post aimed at the SEO/GEO crowd. Both clip-first.
+
+## X thread (3 posts)
+
+**Post 1 (with the citation-threads clip):**
+
+> When an AI answers with sources, where do those citations actually come from?
+>
+> I built an interactive explainer. Ask it "is it safe to reheat rice?" — it
+> searches, reads the trustworthy pages, hits one it *can't* read, and writes an
+> answer that threads every claim back to its source, live:
+>
+> https://wenhaoyu-bryan.github.io/agent-anatomy/episodes/how-ai-reads-the-web/
+
+**Post 2:**
+
+> The quiet moment that matters: one page renders its text with JavaScript, so the
+> fetcher gets an empty shell. It contributes nothing.
+>
+> A page a machine can't read is a page it can't cite. You can watch it get
+> skipped.
+
+**Post 3:**
+
+> Same open engine as Episodes 01 and 1.5 — this is the third JSON trace it plays,
+> no forks. The schema grew search, page fetches, and citations, and stayed
+> backward compatible.
+>
+> Three episodes, one engine: https://github.com/wenhaoyu-bryan/agent-anatomy
+
+## LinkedIn post (marketing / SEO / GEO audience)
+
+> "How do I get my content cited by AI?" is the new "how do I rank on Google?" —
+> and most of the advice is guesswork.
+>
+> So I built something you can just watch: an interactive replay of an AI
+> answering a real question — "is it safe to reheat rice?" — by searching the web
+> and citing its sources. No slides, no funnel diagrams. The actual mechanism.
+>
+> Three things decide which pages it uses, and you can see each one happen:
+>
+> 1. It has to READ the page. One source renders its content with JavaScript; the
+>    fetcher gets an empty shell and moves on. Server-rendered HTML wins.
+> 2. It has to EXTRACT the answer. The pages that got cited put the answer in
+>    clear prose near the top — not buried under menus and preamble.
+> 3. It has to TRUST the page. Between two readable sources, it leaned on the one
+>    with specific, checkable substance.
+>
+> That's "GEO" with the jargon removed: write pages a person — and the machine
+> reading on their behalf — can actually read.
+>
+> Watch it (60 seconds): https://wenhaoyu-bryan.github.io/agent-anatomy/episodes/how-ai-reads-the-web/
+
+## Recording the citation-threads clip (the share moment)
+
+The composed moment is S5 with the answer assembling:
+
+1. Open the Episode 02 page at 1440×900, hide the cursor, scroll to the S5 replay
+   with the timeline at the start.
+2. Press play. Let it run through the search and the fetches (watch the source
+   chips light, and the recipe blog dim with an ✕), and keep recording as the
+   answer writes in and the citation threads draw on from each cited span back to
+   its source chip.
+3. Stop a beat after the last thread lands. ~14s, no editing. (Hover a citation at
+   the end to show the highlight, if you want a second beat.)

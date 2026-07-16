@@ -31,10 +31,33 @@ driven by the same engine.
   nearly believes it, then verifies against the real file, finds the bug, and fixes it.
   The one failure with a happy ending, and it's no accident.
 
-It's also the trace format's second consumer. The `1.1` schema adds a
-`context_evicted` event (which drives the eviction above) and optional authorial
-annotations — backward compatible, so every 1.0 trace still plays. Three new trace
-files, zero engine forks.
+The `1.1` schema adds a `context_evicted` event (which drives the eviction above)
+and optional authorial annotations — backward compatible, so every 1.0 trace still
+plays. Three new trace files, zero engine forks.
+
+## Episode 02 — How AI reads the web
+
+![An agent's answer assembles with luminous threads reaching back from each claim to the source it was read from](./docs/media/citations.gif)
+
+**[How AI reads the web](https://wenhaoyu-bryan.github.io/agent-anatomy/episodes/how-ai-reads-the-web/)**
+is retrieval, made visible. Asked *"is it safe to reheat rice?"* — a question its
+training can't answer with confidence — the agent searches, weighs five results,
+reads the two most trustworthy, hits one page it **can't read at all** (a
+JavaScript-only shell), and writes a short answer whose every claim is threaded
+back to the source it came from.
+
+- **The funnel** — the whole web narrows to a handful of results, then to the few
+  worth reading, then to fragments flowing into the same context window from Episode 01.
+- **Reading a page** — boilerplate falls away and a fragment survives; a page that
+  can't be read can't be cited.
+- **The replay** — source chips light as pages are read (one dims with an ✕), and the
+  answer assembles with curved citation threads reaching back to its sources.
+
+The `1.2` schema adds web `search`, page `fetch` (which may return `unreadable`), a
+top-level `sources` registry, and `citations` binding answer spans to sources — and
+enforces the thesis in the schema itself: *a source can't be cited unless it was
+read.* **Three episodes, one engine, from one backward-compatible format** — the
+proof it generalizes.
 
 This repo is two products, and both matter:
 

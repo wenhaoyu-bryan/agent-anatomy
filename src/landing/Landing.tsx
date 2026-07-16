@@ -1,5 +1,6 @@
 const EPISODE_URL = `${import.meta.env.BASE_URL}episodes/how-an-agent-works/`;
 const EPISODE_1_5_URL = `${import.meta.env.BASE_URL}episodes/where-agents-go-wrong/`;
+const EPISODE_02_URL = `${import.meta.env.BASE_URL}episodes/how-ai-reads-the-web/`;
 
 export function Landing() {
   return (
@@ -36,7 +37,14 @@ export function Landing() {
             href={EPISODE_1_5_URL}
             status="live"
           />
-          <EpisodeCard number="02" title="To be announced" blurb="" status="planned" />
+          <EpisodeCard
+            number="02"
+            title="How AI reads the web"
+            blurb="Search, selection, reading a page, and citations — how an agent finds and cites the web."
+            href={EPISODE_02_URL}
+            status="live"
+          />
+          <EpisodeCard number="03" title="To be announced" blurb="" status="planned" />
         </section>
 
         <footer className="mt-auto pt-16">

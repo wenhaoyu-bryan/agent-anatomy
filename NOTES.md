@@ -611,3 +611,42 @@ render; **0 console errors** (2 warnings are three.js's `THREE.Clock` deprecatio
 also on Ep 01/1.5). Mobile 390×844: no horizontal overflow, replay tabs +
 sources panel work. Budget re-measured on the heaviest page (ep02, all scenes +
 three.js): **401 KB gz < 450** (§1) — no regression.
+
+### U4 — copy, polish, ship (this milestone)
+
+Most narrative copy landed with its section in U1–U3 (hero, funnel captions, S4
+figure, S6 close). U4 = the peripheral ship work:
+
+- **Landing** flipped: Ep 02 card now LIVE with link + blurb; added an Ep 03
+  "Planned" slot to keep the series shape (03 now the dimmed slot, not 02).
+- **S6 close** (written in U3's commit) — the "So how do you get cited?" payoff,
+  ~150 words derived only from what the reader watched (read it / extract it /
+  trust it), GEO named once, no pitch; then the series index with Ep 03 planned.
+  Gets the brief's extra editing pass — reads as explanation, not marketing.
+- **llms.txt**: added the Ep 02 summary + page link, and rewrote the schema line
+  for 1.2 (search/fetch/sources/citations) + "three episodes, one engine."
+- **README**: new Episode 02 section (funnel / reading / replay bullets) with the
+  citation-threads GIF, and the "three episodes, one engine, one backward-
+  compatible format" line; the "second consumer" phrasing retired.
+- **docs/launch.md**: third-launch section — an X thread (citation-clip-first) and
+  a **LinkedIn post aimed at the marketing/SEO/GEO audience** (the second persona
+  the brief calls for), plus the citation-clip recording recipe.
+- **OG image** (`public/og/episode-02.png`, 1200×630): a token-styled card
+  reusing the Ep 01/1.5 card layout (Space Grotesk head, IBM Plex Mono labels, §6
+  palette, vignette) with the S5 motif — a short answer whose two spans thread to
+  two "read" source chips, the JS blog struck through, a "found" forum. Built from
+  an HTML card, screenshotted via Playwright.
+- **citations GIF** (`docs/media/citations.gif`, 900px, ~114 KB): four real frames
+  captured from the S5 panel — sources found → read (one ✕) → answer + threads
+  drawn → a citation hovered — assembled with ffmpeg (concat + two-pass palette).
+  Stepped telling like the eviction GIF; a live screen recording per launch.md
+  will read smoother for the actual post.
+
+Reduced-motion + mobile re-checked (Playwright): no horizontal overflow at 390px,
+replay tabs + sources threads work stacked, funnel falls back to the static
+diagram. §1 budget re-measured on all three episodes — ep02 (heaviest) 401 KB gz,
+under 450, no regression to Ep 01/1.5.
+
+Verified: `pnpm test` 46 green, `pnpm trace:validate` 6 green, schema diff clean,
+full `pnpm build` green (four pages prerender), CI greps pass. Episode 02 is
+feature-complete on `feature/episode-02`.
