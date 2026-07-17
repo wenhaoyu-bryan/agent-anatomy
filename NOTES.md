@@ -725,34 +725,79 @@ behavior, a Tokyo two-session integration test, backward-compat, and 7 rejection
 rules). `pnpm trace:validate` 7 green. `pnpm schema:build` idempotent (regenerated,
 CI git-diff will pass). Demo = read the Tokyo trace as text.
 
-### Local toolchain (this machine — RESOLVED for dev; read before V2+)
+### Local toolchain (this machine — FULLY RESOLVED; read before V2+)
 
-The machine's default Node is **22.23.1**, which breaks two things (both
-pre-existing, both reproduce on clean `main`, neither related to the schema work):
-1. Vite bundling `vite.config.ts` (with `@tailwindcss/vite`) through esbuild
-   mangles `enhanced-resolve`'s CJS interop → `getType is not a function`.
-2. `tsx@4.23.0`'s transformer is broken → `fe.isESM is not a function`.
+Two problems, now both fixed:
+1. **Default Node 22.23.1** made `vite build` fail at config load
+   (`@tailwindcss/vite` → `enhanced-resolve` "getType is not a function", a CJS
+   interop failure). **Fix: run everything on Node 22.20.0 via `fnm`** —
+   installed `fnm` (`brew install fnm`) + `fnm install 22.20.0`; prefix commands
+   with `fnm exec --using 22.20.0 pnpm <script>`.
+2. **Stale/corrupted `node_modules`** made a whole cascade of deps fail at
+   ESM/CJS interop at build/runtime (`tsx` "fe.isESM", `maath`→`three`
+   "Vector2 is not a constructor" in prerender, `react-dom` "createRoot is not a
+   function" so no React page — not even the live Ep 02 — would mount).
+   **Fix: clean reinstall** — `rm -rf node_modules && fnm exec --using 22.20.0
+   pnpm install --frozen-lockfile` (2s from the store). After it, the FULL
+   `pnpm build` is green: 5 pages bundled + all 5 prerendered, and preview-served
+   pages mount with 0 console errors.
 
-**Fix: use Node 22.20.0 via `fnm`.** Installed `fnm` (`brew install fnm`) and
-`fnm install 22.20.0`. Run every local pnpm command through it:
-`fnm exec --using 22.20.0 pnpm <script>`. On 22.20.0 the vite config loads with
-the **default** loader (no getType error) and `pnpm dev` / `test` /
-`trace:validate` / `schema:build` all work. **The repo is left CI-identical** — I
-reverted the exploratory `--configLoader runner` + ESM-`dirname` edits; the diff is
-only the V1 schema work. CI pins `node-version: 22` and shipped Ep 02 green, so CI
-is unaffected.
+**Repo left CI-identical** — no `--configLoader runner` / ESM-`dirname` hacks
+(reverted); the diff is only the episode work. CI pins `node-version: 22` and does
+a fresh `pnpm install`, so CI is unaffected either way.
 
-**Known-remaining, NOT a blocker for V1–V3:** the production `pnpm build`
-**prerender** step still fails locally (on both 22.20 and 22.23) because Node
-loading the vite SSR bundle hits a `maath`→`three` CJS/ESM interop
-(`THREE.Vector2 is not a constructor`) — an environment limitation (macOS Tahoe
-arm64), same on `main`. `pnpm dev` never loads that bundle in Node, so V2/V3 are
-verified the Ep-02 way: **dev server + Playwright** (dev server listens on IPv6
-`[::1]:5173`; curl/Playwright must target `localhost`/`[::1]`, and a
-`http_proxy=127.0.0.1:7890` is set — use `--noproxy '*'` / `NO_PROXY`). CI runs the
-full build+prerender (Ep 02 precedent); revisit local prerender at V4 ship if
-needed (candidate: pin `tsx`, or run prerender under the working Node).
+**Verification loop for V2+: `vite build` → `vite preview --port 4173` →
+Playwright.** (The `pnpm dev` HMR server still throws a babel/`browserslist`
+"findConfigFile" error — didn't chase it since build+preview works.) preview binds
+IPv6; target `localhost`/`[::1]:4173`. A `http_proxy=127.0.0.1:7890` is set — use
+`--noproxy '*'` / `NO_PROXY`. Playwright profile can get a stale
+`SingletonLock` — `pkill -f ms-playwright-mcp` + delete the lock if "browser
+already in use". See [[reference_agent_anatomy_node_toolchain]].
 
-Verified V1 gates on 22.20.0: `pnpm test` 63 green, `pnpm trace:validate` 7 green,
-`pnpm schema:build` idempotent, `tsc -b` clean, and both `vite build` stages green
-(4 pages + SSR bundle). V1 committed at 40f1ad1.
+Verified V1 gates on 22.20.0 + fresh install: `pnpm test` 63 green,
+`pnpm trace:validate` 7 green, `pnpm schema:build` idempotent, `tsc -b` clean,
+full `pnpm build` green (5 pages prerender). V1 committed at 40f1ad1.
+
+### V2 — replay rig, two sessions, DOM/2D (this milestone)
+
+New page `episodes/how-agents-remember/` (`src/episode03/`), wired like Ep 02:
+`vite.config` input, `entry-server.renderEpisode03`, `prerender.ts` inject, and a
+body-only CI grep ("reads those notes back and finishes the job"). Hero + S5
+`MemoryReplay` showpiece + a minimal series-index close; the S2 recap, S4 figure,
+and full S6 finale come in V3/V4 (Ep-02's U2 pattern).
+
+**Rig** (`MemoryReplay.tsx`) — Ep-01's three-panel rig, third panel now the
+MEMORY layer: **Transcript | Context window (2D meter) | Memory (files)**. The
+two-session timeline, compaction, and the session break are all rendered by
+extending the SHARED components (backward compatible — verified Ep 01/1.5/02
+still play):
+
+- **`Timeline.tsx`** — `computeSegments()` splits the run at each `session_break`
+  into labelled segments ("Session A" / "Session B · The next day", flex-sized by
+  event count, current segment highlighted). Traces with no break yield one
+  unlabelled segment, so every prior episode is unchanged.
+- **`TranscriptPanel.tsx`** — dimming is now driven by `frame.contextItems` (the
+  live set the engine already folds), which cleanly covers eviction, compaction,
+  AND the session break (after a break, all of session A dims — it's out of the
+  window but still in the log). New `EventText` for compaction (summary + "compressed
+  N items"), session_break (a divider rule with the label), and memory_write/read.
+  A `TokenDelta` badge shows `−(before−after)` for compaction and "cleared" for a break.
+- **`ContextMeter2D.tsx`** — a `MeterFooter` helper adds compaction ("N items
+  compressed into a summary · −tokens") and session_break ("Session ended — the
+  window is empty now"); the stacked bar empties on its own at a break because
+  `contextItems` is `[]`.
+- **`MemoryPanel.tsx`** (new, Ep-03) — renders `frame.artifact.files` as file
+  cards (README filtered out as scaffolding), highlights the file being written/
+  read, and shows a "New session — the window is empty. The notes below are still
+  here." banner on the break frame. This is the DOM truth the V3 WebGL scene will
+  dramatize.
+
+**Verified in-browser** (build + preview + Playwright, 0 console errors): seeking
+the timeline to each beat — e13 compaction → **CTX 925/2400**, footer "6 items
+compressed … −1300 tokens", 7 live blocks; **e16 session_break → CTX 0/2400, empty
+bar**, memory panel still shows `notes/tokyo-trip.md` + the empty-window banner;
+e19 memory_read → context rebuilds (+260), note still present; e26 end → both
+`notes/tokyo-trip.md` and `itinerary.md` present (artifact heals). Two-session
+timeline shows "Session A"/"Session B" + "The next day". tsc clean; 63 tests still
+green. Deferred to V4 audit per brief: reduced-motion + mobile-tabs pass. WebGL
+condensation + window-empty scene is V3.

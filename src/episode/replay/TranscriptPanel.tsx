@@ -40,20 +40,18 @@ export function TranscriptPanel() {
   }
 
   const shown = events.slice(0, frame.index + 1);
-  // Which earlier events an eviction has already dropped from the live window.
-  const evicted = new Set<string>();
-  for (const event of shown) {
-    if (event.type === "context_evicted") {
-      for (const id of event.evictedEventIds) evicted.add(id);
-    }
-  }
+  // What's still live in the window right now (the engine already folds
+  // evictions, compaction, and session breaks). Anything shown but not live has
+  // dropped out — dim it. Markers (eviction / session break) aren't window
+  // items themselves, so they're never dimmed.
+  const liveIds = new Set(frame.contextItems.map((event) => event.id));
 
   return (
     <ol className="flex flex-col gap-1.5 p-3">
       {shown.map((event, i) => {
         const isCurrent = i === frame.index;
-        const isEviction = event.type === "context_evicted";
-        const isEvicted = evicted.has(event.id);
+        const isMarker = event.type === "context_evicted" || event.type === "session_break";
+        const isDropped = !isMarker && !liveIds.has(event.id);
         const meta = EVENT_META[event.type];
         return (
           <li
@@ -62,17 +60,16 @@ export function TranscriptPanel() {
             aria-current={isCurrent ? "step" : undefined}
             className={`replay-item rounded-r border-l-2 py-2 pr-3 pl-3 ${
               isCurrent ? "bg-[var(--color-panel)]" : "bg-transparent"
-            } ${isEviction ? "border-dashed" : ""}`}
-            style={{ borderLeftColor: meta.color, opacity: isEvicted ? 0.4 : 1 }}
+            } ${isMarker ? "border-dashed" : ""}`}
+            style={{ borderLeftColor: meta.color, opacity: isDropped ? 0.4 : 1 }}
           >
             <div className="flex items-baseline justify-between gap-3">
               <span className="micro-label" style={{ color: meta.color }}>
                 EVT {String(i + 1).padStart(2, "0")} · {meta.label}
-                {isEvicted ? " · dropped" : ""}
+                {isDropped ? " · dropped" : ""}
               </span>
               <span className="micro-label shrink-0">
-                {isEviction ? "−" : "+"}
-                {event.tokens} tok
+                <TokenDelta event={event} />
               </span>
             </div>
             <EventText event={event} />
@@ -82,6 +79,14 @@ export function TranscriptPanel() {
       })}
     </ol>
   );
+}
+
+/** The per-event budget change: additive events add, evictions and compaction free. */
+function TokenDelta({ event }: { event: TraceEvent }) {
+  if (event.type === "context_evicted") return <>−{event.tokens} tok</>;
+  if (event.type === "compaction") return <>−{event.tokensBefore - event.tokens} tok</>;
+  if (event.type === "session_break") return <>cleared</>;
+  return <>+{event.tokens} tok</>;
 }
 
 function EventText({ event }: { event: TraceEvent }) {
@@ -117,6 +122,46 @@ function EventText({ event }: { event: TraceEvent }) {
           {event.extracted}
         </p>
       </div>
+    );
+  }
+  // Memory (v1.3).
+  if (event.type === "compaction") {
+    return (
+      <div className="mt-1.5">
+        <p className="font-mono text-[11px] text-[var(--color-muted)]">
+          Compressed {event.replacesEventIds.length} items into a summary — smaller, and lossy.
+        </p>
+        <p className="mt-1 border-l border-[var(--color-muted)]/50 pl-2 font-mono text-[13px] leading-relaxed text-[var(--color-muted)] italic">
+          {event.summary}
+        </p>
+      </div>
+    );
+  }
+  if (event.type === "session_break") {
+    return (
+      <div className="mt-1.5 flex items-center gap-3">
+        <span aria-hidden="true" className="h-px flex-1 bg-[var(--color-hairline)]" />
+        <span className="font-mono text-[11px] tracking-wide text-[var(--color-muted)] uppercase">
+          {event.label} — new session, empty window
+        </span>
+        <span aria-hidden="true" className="h-px flex-1 bg-[var(--color-hairline)]" />
+      </div>
+    );
+  }
+  if (event.type === "memory_write") {
+    return (
+      <p className="mt-1.5 font-mono text-[13px] leading-relaxed text-[var(--color-ink)]">
+        Saved a durable note to <span className="text-[var(--color-tool)]">{event.path}</span> — it
+        outlives this window.
+      </p>
+    );
+  }
+  if (event.type === "memory_read") {
+    return (
+      <p className="mt-1.5 font-mono text-[13px] leading-relaxed text-[var(--color-ink)]">
+        Read <span className="text-[var(--color-tool)]">{event.path}</span> back into the window — the
+        notes are context again.
+      </p>
     );
   }
   const body = eventBody(event);

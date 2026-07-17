@@ -1,10 +1,39 @@
 import { useReplay } from "./store";
 import { EVENT_META } from "./eventMeta";
+import type { TraceEvent } from "../../trace/schema";
+
+const SESSION_LETTERS = ["A", "B", "C", "D", "E"];
+
+/**
+ * Split the run into sessions at each `session_break` (v1.3). A break ends its
+ * session; the caption on the next session is the break's label ("The next
+ * day"). Traces with no break yield a single unlabeled segment, so every prior
+ * episode renders exactly as before.
+ */
+function computeSegments(events: TraceEvent[]) {
+  const bounds = [-1];
+  events.forEach((event, i) => {
+    if (event.type === "session_break") bounds.push(i);
+  });
+  bounds.push(events.length - 1);
+  return bounds.slice(0, -1).map((start, k) => {
+    const end = bounds[k + 1]!; // last event index of this segment (inclusive)
+    const breakEvent = start >= 0 ? events[start] : null;
+    return {
+      startIndex: start + 1,
+      endIndex: end,
+      count: end - start,
+      label: `Session ${SESSION_LETTERS[k] ?? k + 1}`,
+      caption: breakEvent && breakEvent.type === "session_break" ? breakEvent.label : null,
+    };
+  });
+}
 
 /**
  * Scrubber for the replay. The real control is a native range input
  * (arrow keys step events for free — PLAN §8); the event dots above it
- * are a purely visual telemetry strip.
+ * are a purely visual telemetry strip. When the run spans multiple sessions
+ * (v1.3), a label row above the strip marks each session.
  */
 export function Timeline() {
   const events = useReplay((s) => s.trace.events);
@@ -18,8 +47,38 @@ export function Timeline() {
       ? "Before the run starts"
       : `Event ${frame.index + 1} of ${length}: ${EVENT_META[frame.event.type].label.toLowerCase()}`;
 
+  const segments = computeSegments(events);
+
   return (
     <div className="min-w-0 flex-1">
+      {segments.length > 1 && (
+        <div aria-hidden="true" className="mb-1.5 flex gap-1">
+          {segments.map((seg, k) => {
+            const isCurrent = frame.index >= seg.startIndex && frame.index <= seg.endIndex;
+            return (
+              <div
+                key={k}
+                className={`flex min-w-0 items-baseline gap-1.5 border-l-2 pl-1.5 ${
+                  k === 0 ? "" : ""
+                }`}
+                style={{ flexGrow: seg.count, borderLeftColor: isCurrent ? "var(--color-tool)" : "var(--color-hairline)" }}
+              >
+                <span
+                  className="micro-label shrink-0"
+                  style={{ color: isCurrent ? "var(--color-ink)" : "var(--color-muted)" }}
+                >
+                  {seg.label}
+                </span>
+                {seg.caption && (
+                  <span className="truncate font-mono text-[10px] text-[var(--color-muted)]">
+                    · {seg.caption}
+                  </span>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
       <div aria-hidden="true" className="relative mx-[2px] flex items-center justify-between">
         <span className="absolute inset-x-0 top-1/2 h-px bg-[var(--color-hairline)]" />
         {events.map((event, i) => (
