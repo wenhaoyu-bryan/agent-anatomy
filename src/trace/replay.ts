@@ -91,11 +91,26 @@ export function createReplay(trace: Trace): Replay {
       const evicted = new Set(event.evictedEventIds);
       live = live.filter((item) => !evicted.has(item.id));
       tokensUsed -= event.tokens;
+    } else if (event.type === "compaction") {
+      // The replaced items collapse into one summary item (this event). Its
+      // `tokens` is the AFTER size, so the window drops by tokensBefore − tokens.
+      const replaced = new Set(event.replacesEventIds);
+      live = [...live.filter((item) => !replaced.has(item.id)), event];
+      tokensUsed += event.tokens - event.tokensBefore;
+    } else if (event.type === "session_break") {
+      // The window empties completely. Files in the artifact layer persist —
+      // that's the whole point of writing memory down.
+      live = [];
+      tokensUsed = 0;
     } else {
       live = [...live, event];
       tokensUsed += event.tokens;
       if (event.type === "tool_result" && event.artifact) {
         artifact = event.artifact;
+      }
+      if (event.type === "memory_write") {
+        // A note is a file; derive the new artifact snapshot by patching it in.
+        artifact = { ...artifact, files: { ...artifact.files, [event.path]: event.content } };
       }
       if (event.type === "search") {
         for (const result of event.results) {

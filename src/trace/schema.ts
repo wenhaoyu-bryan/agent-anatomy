@@ -9,7 +9,7 @@ import { z } from "zod";
  * - `tool_result.artifact` is a FULL snapshot of the world, not a diff —
  *   snapshots keep the engine trivial and timeline scrubbing instant.
  *
- * Versions (backward compatible — a 1.0 or 1.1 trace still validates and
+ * Versions (backward compatible — a 1.0, 1.1, or 1.2 trace still validates and
  * renders unchanged):
  * - 1.0: the six original event types.
  * - 1.1: adds the `context_evicted` event (drops earlier items out of the
@@ -18,6 +18,12 @@ import { z } from "zod";
  *   come back "unreadable"), an optional top-level `sources` registry, and
  *   optional `citations` on `assistant_message` binding answer spans to the
  *   sources they came from.
+ * - 1.3: adds memory — a `compaction` event (compresses earlier window items
+ *   into one smaller, lossy summary), a `session_break` event (empties the
+ *   window entirely; only files in the artifact layer survive), and
+ *   `memory_write` / `memory_read` events (a durable note written to a file,
+ *   then read back into a fresh window). Context is what's in the window now;
+ *   memory is what got written down outside it.
  *
  * Each newer version's features are rejected in a trace that still declares an
  * older version, so the version field always tells the truth about the file.
@@ -164,11 +170,57 @@ export const traceEventSchema = z.discriminatedUnion("type", [
       extracted: z.string().min(1).optional(),
     })
     .strict(),
+  z
+    .object({
+      ...eventBase,
+      type: z.literal("compaction"),
+      /** Ids of earlier window items compressed away into `summary` (v1.3). */
+      replacesEventIds: z.array(z.string().min(1)).min(1),
+      /** The surviving digest that replaces them — smaller, and lossy. */
+      summary: z.string().min(1),
+      /**
+       * What the replaced items occupied before compaction — must equal the
+       * sum of their `tokens`. This event's own `tokens` is the AFTER size (the
+       * summary is a normal window item; its cost is its `tokens`, like every
+       * other event). The window drops by `tokensBefore − tokens`, and a
+       * compaction must shrink, so `tokens < tokensBefore`.
+       */
+      tokensBefore: z.number().int().positive(),
+    })
+    .strict(),
+  z
+    .object({
+      ...eventBase,
+      type: z.literal("session_break"),
+      /** A short label for the boundary, e.g. "The next day" (v1.3). */
+      label: z.string().min(1),
+    })
+    .strict(),
+  z
+    .object({
+      ...eventBase,
+      type: z.literal("memory_write"),
+      /** The file path written, e.g. "notes/tokyo-trip.md" (v1.3). */
+      path: z.string().min(1),
+      /** The full contents written to that file — a durable note. */
+      content: z.string().min(1),
+    })
+    .strict(),
+  z
+    .object({
+      ...eventBase,
+      type: z.literal("memory_read"),
+      /** The file path read back into the window (v1.3). */
+      path: z.string().min(1),
+      /** The contents pulled in — must match what was written to `path`. */
+      content: z.string().min(1),
+    })
+    .strict(),
 ]);
 
 export const traceSchema = z
   .object({
-    version: z.enum(["1.0", "1.1", "1.2"]),
+    version: z.enum(["1.0", "1.1", "1.2", "1.3"]),
     meta: z
       .object({
         id: z.string().min(1),
@@ -190,8 +242,15 @@ export const traceSchema = z
     const toolNames = new Set(trace.tools.map((tool) => tool.name));
     const isV10 = trace.version === "1.0";
     const isPre12 = trace.version === "1.0" || trace.version === "1.1";
+    const isPre13 = isPre12 || trace.version === "1.2";
 
     const declaredSources = new Set((trace.sources ?? []).map((source) => source.sourceId));
+
+    // Memory (v1.3): notes are files. Track the artifact file map as the run
+    // folds so a `memory_read` can be checked against what was actually
+    // written — and so files survive a `session_break` (which only clears the
+    // window, not the artifact layer). A `tool_result` snapshot replaces it.
+    let files = new Map(Object.entries(trace.initialArtifact.files));
 
     // A top-level sources registry is a 1.2 feature; keep the version honest.
     if (isPre12 && trace.sources !== undefined) {
@@ -246,6 +305,15 @@ export const traceSchema = z
       }
       if (isPre12 && event.type === "assistant_message" && event.citations !== undefined) {
         flag(["citations"], `"citations" requires version "1.2"`);
+      }
+      if (
+        isPre13 &&
+        (event.type === "compaction" ||
+          event.type === "session_break" ||
+          event.type === "memory_write" ||
+          event.type === "memory_read")
+      ) {
+        flag(["type"], `"${event.type}" requires version "1.3"`);
       }
 
       if (event.type === "tool_call" || event.type === "tool_result") {
@@ -304,6 +372,28 @@ export const traceSchema = z
         });
       }
 
+      // Memory files (v1.3): a write records the file; a read must match what
+      // was written; a tool_result snapshot replaces the whole file map. Files
+      // are the artifact layer — they survive a session_break.
+      if (event.type === "memory_write") {
+        files.set(event.path, event.content);
+      }
+      if (event.type === "memory_read") {
+        if (!files.has(event.path)) {
+          flag(
+            ["path"],
+            `reads "${event.path}", which no earlier event wrote (and it isn't in the initial files)`,
+          );
+        } else if (files.get(event.path) !== event.content) {
+          // The episode's thesis, enforced by the schema: what you read back is
+          // exactly the note you wrote — the file didn't change on its own.
+          flag(["content"], `the content read from "${event.path}" doesn't match what was written there`);
+        }
+      }
+      if (event.type === "tool_result" && event.artifact) {
+        files = new Map(Object.entries(event.artifact.files));
+      }
+
       if (event.type === "context_evicted") {
         let reclaimed = 0;
         let allResolved = true;
@@ -326,6 +416,46 @@ export const traceSchema = z
           );
         }
         running -= event.tokens;
+      } else if (event.type === "compaction") {
+        // Compress the replaced items into one summary. Reclaim exactly what
+        // they occupied (tokensBefore), then the summary enters worth `tokens`.
+        let reclaimed = 0;
+        let allResolved = true;
+        event.replacesEventIds.forEach((id, j) => {
+          if (!liveIds.has(id)) {
+            allResolved = false;
+            flag(
+              ["replacesEventIds", j],
+              `compacts "${id}", which is not in the window here (unknown, not yet seen, or already gone)`,
+            );
+          } else {
+            liveIds.delete(id);
+            reclaimed += tokensById.get(id) ?? 0;
+          }
+        });
+        if (allResolved && reclaimed !== event.tokensBefore) {
+          flag(
+            ["tokensBefore"],
+            `tokensBefore must equal the summed tokens of the replaced items (${reclaimed}), got ${event.tokensBefore}`,
+          );
+        }
+        if (event.tokens >= event.tokensBefore) {
+          flag(
+            ["tokens"],
+            `a compaction must shrink the window: tokens (${event.tokens}) must be < tokensBefore (${event.tokensBefore})`,
+          );
+        }
+        // The summary is now a live window item, so it can itself be evicted or
+        // compacted later.
+        liveIds.add(event.id);
+        running += event.tokens - event.tokensBefore;
+      } else if (event.type === "session_break") {
+        if (event.tokens !== 0) {
+          flag(["tokens"], `a session_break empties the window and costs nothing: tokens must be 0`);
+        }
+        // The window is wiped; only the artifact file layer survives.
+        liveIds.clear();
+        running = 0;
       } else {
         liveIds.add(event.id);
         running += event.tokens;

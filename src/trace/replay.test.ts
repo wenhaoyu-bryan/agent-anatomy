@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createReplay } from "./replay";
 import type { ArtifactState, Trace } from "./schema";
+import tokyoTrip from "../../traces/tokyo-trip.trace.json";
 
 const worldBefore: ArtifactState = {
   kind: "webpage",
@@ -182,6 +183,124 @@ describe("createReplay — source states are empty for pre-1.2 traces", () => {
     for (let i = -1; i < replay.length; i++) {
       expect(replay.stateAt(i).sourceStates).toEqual({});
     }
+  });
+});
+
+const memoryTrace: Trace = {
+  version: "1.3",
+  meta: { id: "m", title: "m", description: "m", contextWindowTokens: 1000 },
+  tools: [{ name: "noop", description: "noop" }],
+  initialArtifact: worldBefore,
+  events: [
+    { id: "a", type: "user_message", text: "plan it", tokens: 20 },
+    { id: "b", type: "memory_write", path: "notes.md", content: "hello", tokens: 40 },
+    { id: "c", type: "thinking", text: "lots of research", tokens: 100 },
+    {
+      id: "d",
+      type: "compaction",
+      replacesEventIds: ["a", "c"],
+      summary: "digest",
+      tokensBefore: 120,
+      tokens: 30,
+    },
+    { id: "e", type: "session_break", label: "the next day", tokens: 0 },
+    { id: "f", type: "memory_read", path: "notes.md", content: "hello", tokens: 40 },
+    { id: "g", type: "assistant_message", text: "done", tokens: 10 },
+  ],
+};
+
+describe("createReplay — compaction (v1.3)", () => {
+  it("replaces the compacted items with one summary and drops the window by before − after", () => {
+    const replay = createReplay(memoryTrace);
+    // Full window just before compaction: a(20) + b(40) + c(100) = 160.
+    expect(replay.stateAt(2).tokensUsed).toBe(160);
+    expect(replay.stateAt(2).contextItems.map((event) => event.id)).toEqual(["a", "b", "c"]);
+
+    // Compaction: a and c collapse into the summary (this event). 160 − 120 + 30 = 70.
+    const compacted = replay.stateAt(3);
+    expect(compacted.event?.type).toBe("compaction");
+    expect(compacted.tokensUsed).toBe(70);
+    // b survives; the summary item (d) is now a live window item in its place.
+    expect(compacted.contextItems.map((event) => event.id)).toEqual(["b", "d"]);
+  });
+
+  it("scrubbing back before compaction restores the full window (no shared mutation)", () => {
+    const replay = createReplay(memoryTrace);
+    replay.seek(6);
+    expect(replay.stateAt(2).contextItems.map((event) => event.id)).toEqual(["a", "b", "c"]);
+    expect(replay.stateAt(3).contextItems.map((event) => event.id)).toEqual(["b", "d"]);
+  });
+});
+
+describe("createReplay — session break and memory files (v1.3)", () => {
+  it("a memory_write records the note as an artifact file", () => {
+    const replay = createReplay(memoryTrace);
+    expect(replay.stateAt(0).artifact.files["notes.md"]).toBeUndefined();
+    expect(replay.stateAt(1).artifact.files["notes.md"]).toBe("hello");
+  });
+
+  it("session_break empties the window but leaves the memory files intact", () => {
+    const replay = createReplay(memoryTrace);
+    const broken = replay.stateAt(4);
+    expect(broken.event?.type).toBe("session_break");
+    expect(broken.tokensUsed).toBe(0);
+    expect(broken.contextItems).toEqual([]);
+    // The whole point: the note written last session survives the empty window.
+    expect(broken.artifact.files["notes.md"]).toBe("hello");
+  });
+
+  it("a fresh session reads the note back into an otherwise empty window", () => {
+    const replay = createReplay(memoryTrace);
+    const read = replay.stateAt(5);
+    expect(read.event?.type).toBe("memory_read");
+    // Only the read note is live — the window started empty this session.
+    expect(read.contextItems.map((event) => event.id)).toEqual(["f"]);
+    expect(read.tokensUsed).toBe(40);
+  });
+});
+
+describe("createReplay — Tokyo two-session trace (v1.3 integration)", () => {
+  it("fills, compacts, empties at the break, and rebuilds from notes", () => {
+    const replay = createReplay(tokyoTrip as unknown as Trace);
+    const at = (id: string) => {
+      const i = replay.trace.events.findIndex((event) => event.id === id);
+      return replay.stateAt(i);
+    };
+
+    // Session A fills to a near-full window just before compaction.
+    expect(at("e12").tokensUsed).toBe(2225);
+    // Compaction drops it sharply (2225 − 1730 + 430 = 925).
+    expect(at("e13").tokensUsed).toBe(925);
+    expect(at("e13").event?.type).toBe("compaction");
+    // The notes file exists after the write.
+    expect(at("e14").artifact.files["notes/tokyo-trip.md"]).toContain("Open questions");
+
+    // The session break empties the window; the notes file survives it.
+    const broken = at("e16");
+    expect(broken.tokensUsed).toBe(0);
+    expect(broken.contextItems).toEqual([]);
+    expect(broken.artifact.files["notes/tokyo-trip.md"]).toContain("Open questions");
+
+    // Session B: the read pulls the same note back into the fresh window.
+    const read = at("e19");
+    expect(read.event?.type).toBe("memory_read");
+    expect(read.contextItems.map((event) => event.id)).toEqual(["e17", "e18", "e19"]);
+
+    // The run ends with the itinerary written and the note still present.
+    const end = replay.stateAt(replay.length - 1);
+    expect(end.artifact.files["itinerary.md"]).toContain("Day 1");
+    expect(end.artifact.files["notes/tokyo-trip.md"]).toContain("Open questions");
+  });
+
+  it("the memory_read content is byte-identical to what was written", () => {
+    const replay = createReplay(tokyoTrip as unknown as Trace);
+    const write = replay.trace.events.find(
+      (event) => event.type === "memory_write" && event.path === "notes/tokyo-trip.md",
+    );
+    const read = replay.trace.events.find((event) => event.type === "memory_read");
+    expect(write && write.type === "memory_write" && write.content).toBe(
+      read && read.type === "memory_read" ? read.content : null,
+    );
   });
 });
 

@@ -650,3 +650,89 @@ under 450, no regression to Ep 01/1.5.
 Verified: `pnpm test` 46 green, `pnpm trace:validate` 6 green, schema diff clean,
 full `pnpm build` green (four pages prerender), CI greps pass. Episode 02 is
 feature-complete on `feature/episode-02`.
+
+## Episode 03 — "How Agents Remember" (full episode; brief: EPISODE-03-BRIEF.md)
+
+Milestones V1–V4. Feature branch `feature/episode-03`, PR + demo per milestone
+(brief says "stop and demo after each"). The resolution of the series' open wound
+(1.5's F2 eviction): context is what's in the window now; memory is what gets
+written down outside it and survives.
+
+### V1 — schema 1.3 + two-session Tokyo trace (this milestone)
+
+Schema bumped to **1.3**, backward compatible (1.0/1.1/1.2 validate and render
+unchanged; a dedicated test re-validates all six prior traces and asserts their
+versions are untouched). Four new optional event types:
+
+- **`compaction`** `{ replacesEventIds[], summary, tokensBefore, tokens }` — the
+  replaced items collapse into one summary item (the event itself). Folds like an
+  eviction plus an insert: net window change `tokens − tokensBefore`.
+- **`session_break`** `{ label, tokens: 0 }` — empties the window (running → 0,
+  live → []); only the artifact file layer survives.
+- **`memory_write`** / **`memory_read`** `{ path, content }` — a note is a file;
+  write patches it onto the artifact snapshot, read pulls it back into the window.
+
+**Key design call — every new event keeps a `tokens` field (the invariant).**
+The brief's TS sketches `session_break`/`compaction` without a plain `tokens`, but
+every existing component (`ContextScene`, `ContextMeter2D`, `TranscriptPanel`,
+`EvictionCanvas`, …) reads `event.tokens` on values typed as `TraceEvent`. A
+token-less union member would break `tsc` across Ep 01/1.5/02 — exactly the
+prior-episode collateral the brief puts out of scope. So: `session_break.tokens`
+is enforced `=== 0` (a break costs nothing), and `compaction`'s base `tokens` IS
+the brief's `tokensAfter` (the summary is an ordinary window item; its post-size
+is its `tokens`, like every other event) — so there is **no separate `tokensAfter`
+field**, only the extra `tokensBefore`. Flagged naming deviation, documented in
+the changelog. Zero prior-episode logic changed.
+
+**Schema fold (superRefine) additions**, folding alongside the existing token math:
+- compaction: `replacesEventIds` must be live; `tokensBefore` must equal their
+  summed tokens (mirrors the eviction reclaim check); `tokens < tokensBefore` (a
+  compaction must shrink). The summary becomes a live item (can be evicted later).
+- session_break: `tokens === 0`; clears the live set + running total.
+- memory: track a `files` map (seeded from `initialArtifact.files`, replaced by a
+  `tool_result` snapshot, patched by `memory_write`); a `memory_read` must
+  reference a written path and its `content` must be **byte-identical** to the
+  file — the thesis ("you read back exactly what you wrote"), schema-enforced.
+- version gate: the four new types are rejected in a <1.3 trace (mirrors 1.1/1.2).
+
+**Engine** (`replay.ts`): three new fold branches. compaction filters the replaced
+ids and pushes itself as the summary item, `tokensUsed += tokens − tokensBefore`;
+session_break sets `live = []`, `tokensUsed = 0` (files untouched — the point);
+memory_write derives a new artifact snapshot with the note patched into `files`.
+`sourceStates`/citations logic unchanged, kept monotonic across the break (a
+citation asserts "read at some point in this run"; the final answer cites session-A
+reads + the session-B lookup, all valid). Exhaustive switches updated:
+`eventMeta.ts` (labels COMPACT/SESSION/WRITE/READ + `eventBody`), `palette.ts`
+(compaction/session_break → system-grey = desaturated/lossy; memory I/O → tool cyan).
+
+**The trace** (`traces/tokyo-trip.trace.json`, 26 events, v1.3, window 2400):
+"Plan a 3-day Tokyo trip." **Session A (e01–e16):** research burst — 2 searches +
+4 fetches (Yanaka guide, quiet-temples, Tsukiji market, November) fill the window
+to **peak 2225/2400 (93%)**; the agent notices it's running out (e12), compacts
+the six research events (tokensBefore 1730 → tokens 430, ≈4×) so the window drops
+sharply to 925, writes `notes/tokyo-trip.md`, reports day-1 progress, then
+`session_break` "The next day". **Session B (e17–e26):** empty window; the agent
+states plainly it doesn't remember, reads the note back (byte-identical), and — the
+lossiness payoff — the summary had kept "some temples close early midweek" but
+DROPPED the exact hours, which it now recovers with one fetch of a `temple-hours`
+page; finishes days 2–3, writes `itinerary.md` (artifact heals), and answers with
+citations to the pages it read. The `travelbuzz-blog` (30-stops) is found but never
+read — selection lesson tied to the user's "don't want to cram." Citation offsets
+computed against the exact answer string and asserted by the schema.
+
+Tests: 63 green (was 46; +17 for 1.3 — compaction/session_break/memory engine
+behavior, a Tokyo two-session integration test, backward-compat, and 7 rejection
+rules). `pnpm trace:validate` 7 green. `pnpm schema:build` idempotent (regenerated,
+CI git-diff will pass). Demo = read the Tokyo trace as text.
+
+**Blocker flagged (pre-existing, NOT V1): local `pnpm build` fails at vite config
+load.** `@tailwindcss/node@4.3.2`'s ESM bundle imports `enhanced-resolve@5.21.6`
+(CJS) and gets `getType is not a function` — an ESM/CJS named-export interop
+failure under this machine's **Node 22.23.1**. Reproduces on clean `main`, so it
+predates Ep 03 and is unrelated to the schema work. `tsc`, `test`, `trace:validate`,
+and `schema:build` (4 of CI's 5 steps) all pass; only the page-bundling step is
+affected — and V1 is "No UI," so nothing in V1 needs it. CI pins `node-version: 22`
+and shipped Ep 02 green, so CI's cached Node is unaffected. **Must be resolved
+before V2** (the dev server loads the same `vite.config.ts`): pin local Node to a
+working 22.x (add `.nvmrc`) or bump `@tailwindcss/*`. Surfacing to the owner rather
+than mutating deps/lockfile unprompted.

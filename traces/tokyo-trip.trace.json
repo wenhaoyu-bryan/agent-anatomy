@@ -1,0 +1,313 @@
+{
+  "version": "1.3",
+  "meta": {
+    "id": "tokyo-trip",
+    "title": "Plan a 3-day Tokyo trip",
+    "description": "A research-heavy task too big for one window. The agent fills its context with travel research, notices it's running out of room, compacts the research into a smaller (and lossier) summary, writes durable notes to a file, and runs out of session. The next day, in a fresh empty window, it reads those notes back and finishes the plan — recovering the one detail the summary dropped. Token counts are hand-tuned estimates.",
+    "contextWindowTokens": 2400
+  },
+  "tools": [
+    {
+      "name": "search_web",
+      "description": "Search the web and get back a list of pages with titles and snippets."
+    },
+    {
+      "name": "fetch_page",
+      "description": "Open one page and read its text."
+    }
+  ],
+  "sources": [
+    {
+      "sourceId": "yanaka-guide",
+      "title": "Yanaka & Nezu: Tokyo's quiet old-town temples — Tokyo Neighborhood Guide",
+      "url": "tokyoneighborhoods.example/yanaka-nezu",
+      "faviconHue": 210
+    },
+    {
+      "sourceId": "tsukiji-market",
+      "title": "Tsukiji Outer Market: what to eat and when to go",
+      "url": "tokyoeats.example/tsukiji-outer-market",
+      "faviconHue": 30
+    },
+    {
+      "sourceId": "quiet-temples",
+      "title": "10 calm temples and shrines away from the crowds",
+      "url": "slowtokyo.example/quiet-temples",
+      "faviconHue": 150
+    },
+    {
+      "sourceId": "november-tokyo",
+      "title": "Tokyo in November: weather, foliage, and events",
+      "url": "seasonaljapan.example/tokyo-november",
+      "faviconHue": 45
+    },
+    {
+      "sourceId": "travelbuzz-blog",
+      "title": "Our 3-day Tokyo blitz — 30 stops you can't miss!",
+      "url": "travelbuzz.example/tokyo-in-3-days",
+      "faviconHue": 320
+    },
+    {
+      "sourceId": "temple-hours",
+      "title": "Official visiting hours — Nezu Shrine & Gotokuji",
+      "url": "templehours.example/nezu-gotokuji",
+      "faviconHue": 260
+    }
+  ],
+  "initialArtifact": {
+    "kind": "webpage",
+    "files": {
+      "README.txt": "This run plans a trip across two work sessions. The agent's durable notes appear here as files as it writes them — first the working notes, then the finished itinerary."
+    },
+    "renderId": "workspace"
+  },
+  "events": [
+    {
+      "id": "e01",
+      "type": "system_prompt",
+      "summary": "You are a travel-planning assistant. Research thoroughly before you plan. When the context window gets full, compress what you've learned and save durable notes to a file so work can continue in a later session.",
+      "tokens": 200
+    },
+    {
+      "id": "e02",
+      "type": "user_message",
+      "text": "Help me plan a 3-day Tokyo trip in November. I like food markets and quiet temples, and I really don't want to cram — keep the days relaxed.",
+      "tokens": 40
+    },
+    {
+      "id": "e03",
+      "type": "thinking",
+      "text": "Three days, November, food markets and quiet temples, and an explicit ask to keep it unhurried. I'll research neighborhoods, a market, and some calm temples before I commit to a shape — better to read a few good pages than plan from memory.",
+      "tokens": 60
+    },
+    {
+      "id": "e04",
+      "type": "search",
+      "query": "quiet Tokyo temples food markets relaxed 3 day itinerary november",
+      "results": [
+        {
+          "sourceId": "yanaka-guide",
+          "title": "Yanaka & Nezu: Tokyo's quiet old-town temples — Tokyo Neighborhood Guide",
+          "url": "tokyoneighborhoods.example/yanaka-nezu",
+          "snippet": "A walkable old-town district of small temples and narrow lanes, the calmest corner of central Tokyo."
+        },
+        {
+          "sourceId": "tsukiji-market",
+          "title": "Tsukiji Outer Market: what to eat and when to go",
+          "url": "tokyoeats.example/tsukiji-outer-market",
+          "snippet": "The food stalls, knife shops, and sushi breakfasts of Tsukiji's Outer Market, and the best time of day to arrive."
+        },
+        {
+          "sourceId": "quiet-temples",
+          "title": "10 calm temples and shrines away from the crowds",
+          "url": "slowtokyo.example/quiet-temples",
+          "snippet": "Temples and shrines you can visit without the crush, with visiting notes for each."
+        },
+        {
+          "sourceId": "november-tokyo",
+          "title": "Tokyo in November: weather, foliage, and events",
+          "url": "seasonaljapan.example/tokyo-november",
+          "snippet": "What to expect from Tokyo in late autumn — mild weather, golden ginkgo, and lighter crowds."
+        },
+        {
+          "sourceId": "travelbuzz-blog",
+          "title": "Our 3-day Tokyo blitz — 30 stops you can't miss!",
+          "url": "travelbuzz.example/tokyo-in-3-days",
+          "snippet": "Squeeze thirty sights into a packed long weekend — our hour-by-hour maximum-Tokyo plan."
+        }
+      ],
+      "tokens": 220
+    },
+    {
+      "id": "e05",
+      "type": "thinking",
+      "text": "The neighborhood guide, the market page, the quiet-temples list, and the November overview all look substantive and match what they asked for. The blitz blog is the opposite of relaxed — thirty stops in three days — so I'll skip it. I'll read the other four.",
+      "tokens": 70
+    },
+    {
+      "id": "e06",
+      "type": "fetch",
+      "sourceId": "yanaka-guide",
+      "url": "tokyoneighborhoods.example/yanaka-nezu",
+      "status": "ok",
+      "extracted": "Yanaka is one of the few Tokyo neighborhoods that survived the 20th century largely intact — low wooden houses, narrow lanes, and dozens of small temples packed into a walkable grid. It sits beside Nezu and Sendagi (together called 'Yanesen'), an area locals treat as a quiet escape. Start at Yanaka Ginza, a modest shopping street, then wander the temple lanes toward Nezu Shrine. It rewards slow walking rather than a checklist. Mornings and late afternoons are calmest; midday tour groups pass through Yanaka Ginza but rarely the side streets.",
+      "tokens": 360
+    },
+    {
+      "id": "e07",
+      "type": "thinking",
+      "text": "Yanaka is exactly the register they want — calm, walkable, temple-dense, no rush. That's a strong anchor for one day. Now the temples themselves, for specifics.",
+      "tokens": 55
+    },
+    {
+      "id": "e08",
+      "type": "fetch",
+      "sourceId": "quiet-temples",
+      "url": "slowtokyo.example/quiet-temples",
+      "status": "ok",
+      "extracted": "Nezu Shrine is one of Tokyo's calmest, open 9:30 to 16:30 with the last entry at 16:00; it's busiest at weekends. Gotokuji, the temple famous for its rows of lucky-cat figures, is open 8:00 to 16:30 daily and sits a little west of the center. Several smaller temples in the area close their inner halls earlier midweek — often by mid-afternoon on Wednesdays — so it's worth checking a specific temple's hours before a long trip across town.",
+      "tokens": 340
+    },
+    {
+      "id": "e09",
+      "type": "fetch",
+      "sourceId": "tsukiji-market",
+      "url": "tokyoeats.example/tsukiji-outer-market",
+      "status": "ok",
+      "extracted": "Tsukiji's inner wholesale market moved to Toyosu years ago, but the Outer Market — the streets of food stalls, knife shops, and small restaurants — stays where it always was and is very much alive. Come hungry and come early: most stalls open around 8:00 and the best ones wind down by early afternoon. Weekday mornings are the sweet spot; Sundays and public holidays are crowded, and a scattering of stalls close on Wednesdays. Look for grilled seafood skewers, tamagoyaki on a stick, and fresh sushi breakfasts.",
+      "tokens": 330
+    },
+    {
+      "id": "e10",
+      "type": "search",
+      "query": "Tokyo november autumn foliage timing quiet temples",
+      "results": [
+        {
+          "sourceId": "november-tokyo",
+          "title": "Tokyo in November: weather, foliage, and events",
+          "url": "seasonaljapan.example/tokyo-november",
+          "snippet": "When the ginkgo and maples peak, and how mild the days really are."
+        },
+        {
+          "sourceId": "quiet-temples",
+          "title": "10 calm temples and shrines away from the crowds",
+          "url": "slowtokyo.example/quiet-temples",
+          "snippet": "Temples and shrines you can visit without the crush, with visiting notes for each."
+        },
+        {
+          "sourceId": "travelbuzz-blog",
+          "title": "Our 3-day Tokyo blitz — 30 stops you can't miss!",
+          "url": "travelbuzz.example/tokyo-in-3-days",
+          "snippet": "Squeeze thirty sights into a packed long weekend — our hour-by-hour maximum-Tokyo plan."
+        }
+      ],
+      "tokens": 180
+    },
+    {
+      "id": "e11",
+      "type": "fetch",
+      "sourceId": "november-tokyo",
+      "url": "seasonaljapan.example/tokyo-november",
+      "status": "ok",
+      "extracted": "November is one of the best months to visit Tokyo: cool, dry, and clear, with daytime highs around 15°C. It's the tail of autumn — the city's ginkgo avenues and temple gardens turn gold and red, usually peaking in the second half of the month. Crowds are lighter than in cherry-blossom season. Pack layers for cool evenings, and note that some gardens extend their hours for evening foliage light-ups late in the month.",
+      "tokens": 300
+    },
+    {
+      "id": "e12",
+      "type": "thinking",
+      "text": "I'm running low on room — the window is nearly full of raw research and I can feel the earliest of it about to get pushed out. Before I lose anything, let me compress what I've learned into a short digest and then save proper notes to a file, so a later session can pick this up cleanly.",
+      "tokens": 70
+    },
+    {
+      "id": "e13",
+      "type": "compaction",
+      "replacesEventIds": ["e04", "e06", "e08", "e09", "e10", "e11"],
+      "summary": "Research digest. Quiet temples: focus on Yanaka & Nezu — a walkable old-town area of small temples and narrow lanes, calmest morning and late afternoon. Gotokuji (the lucky-cat temple) is worth adding, a little west of center. Food: Tsukiji Outer Market, best in the morning before stalls wind down; some close Wednesdays. Season: November is mild with late-autumn foliage peaking mid-to-late month, crowds light. One caution carried over from the temple guide: some temples close early midweek, so exact opening hours need checking before building a day around them.",
+      "tokensBefore": 1730,
+      "tokens": 430
+    },
+    {
+      "id": "e14",
+      "type": "memory_write",
+      "path": "notes/tokyo-trip.md",
+      "content": "# Tokyo trip — working notes\n\n## Preferences\n- 3 days, November. Likes food markets and quiet temples.\n- Does NOT want to cram — keep every day light and unhurried.\n\n## Chosen areas\n- Tsukiji Outer Market — food; go early (before ~10am), some stalls closed midweek.\n- Yanaka & Nezu — quiet old-town temples and shrines, walkable and calm.\n- Gotokuji — the lucky-cat temple, a little west of center, for a calm second day.\n\n## Day shape so far\n- Day 1: Tsukiji market in the morning, Yanaka temples in the afternoon. (drafted)\n- Days 2-3: still to plan — keep them slow.\n\n## Open questions\n- Exact opening hours for Nezu Shrine and Gotokuji. The research summary only kept \"some temples close early midweek\" and dropped the specific times — look them up before finalizing.",
+      "tokens": 260
+    },
+    {
+      "id": "e15",
+      "type": "assistant_message",
+      "text": "Good start — here's where day 1 landed. Morning at Tsukiji Outer Market for breakfast and stalls, then a slow afternoon wandering Yanaka's temple lanes toward Nezu Shrine. It fits your \"don't cram\" rule with room to spare. I've saved my research and this draft to a notes file, so we can pick it up anytime — I'll plan days 2 and 3 next.",
+      "tokens": 180
+    },
+    {
+      "id": "e16",
+      "type": "session_break",
+      "label": "The next day",
+      "tokens": 0
+    },
+    {
+      "id": "e17",
+      "type": "user_message",
+      "text": "Let's finish the Tokyo plan.",
+      "tokens": 35
+    },
+    {
+      "id": "e18",
+      "type": "thinking",
+      "text": "This is a new session — my window is empty and I don't actually remember our earlier conversation. But I left myself notes last time. Let me read them before I do anything else.",
+      "tokens": 55
+    },
+    {
+      "id": "e19",
+      "type": "memory_read",
+      "path": "notes/tokyo-trip.md",
+      "content": "# Tokyo trip — working notes\n\n## Preferences\n- 3 days, November. Likes food markets and quiet temples.\n- Does NOT want to cram — keep every day light and unhurried.\n\n## Chosen areas\n- Tsukiji Outer Market — food; go early (before ~10am), some stalls closed midweek.\n- Yanaka & Nezu — quiet old-town temples and shrines, walkable and calm.\n- Gotokuji — the lucky-cat temple, a little west of center, for a calm second day.\n\n## Day shape so far\n- Day 1: Tsukiji market in the morning, Yanaka temples in the afternoon. (drafted)\n- Days 2-3: still to plan — keep them slow.\n\n## Open questions\n- Exact opening hours for Nezu Shrine and Gotokuji. The research summary only kept \"some temples close early midweek\" and dropped the specific times — look them up before finalizing.",
+      "tokens": 260
+    },
+    {
+      "id": "e20",
+      "type": "thinking",
+      "text": "That's enough to continue: day 1 is set, the preferences are clear, and I flagged one open question to myself — the exact temple hours, which my earlier summary dropped. I'll look those up now so I can place days 2 and 3 without anyone having to rush.",
+      "tokens": 70
+    },
+    {
+      "id": "e21",
+      "type": "search",
+      "query": "Nezu Shrine Gotokuji official opening hours",
+      "results": [
+        {
+          "sourceId": "temple-hours",
+          "title": "Official visiting hours — Nezu Shrine & Gotokuji",
+          "url": "templehours.example/nezu-gotokuji",
+          "snippet": "Current visiting hours and last-entry times for Nezu Shrine and Gotokuji, with midweek exceptions noted."
+        },
+        {
+          "sourceId": "quiet-temples",
+          "title": "10 calm temples and shrines away from the crowds",
+          "url": "slowtokyo.example/quiet-temples",
+          "snippet": "Temples and shrines you can visit without the crush, with visiting notes for each."
+        }
+      ],
+      "tokens": 150
+    },
+    {
+      "id": "e22",
+      "type": "fetch",
+      "sourceId": "temple-hours",
+      "url": "templehours.example/nezu-gotokuji",
+      "status": "ok",
+      "extracted": "Official visiting hours. Nezu Shrine: 9:30-16:30 for the grounds, last entry 16:00. Gotokuji: 8:00-16:30, open daily. Note: on the third Wednesday of each month, Nezu's inner hall closes early at 14:00 for cleaning.",
+      "tokens": 220
+    },
+    {
+      "id": "e23",
+      "type": "thinking",
+      "text": "There they are — Nezu 9:30 to 16:30, Gotokuji 8:00 to 16:30. That's the detail the summary lost, recovered in one lookup. Now I can build the rest around real times instead of guessing.",
+      "tokens": 60
+    },
+    {
+      "id": "e24",
+      "type": "thinking",
+      "text": "Shape for the rest, keeping it slow: day 2 is an unhurried temple day out west — Gotokuji in the calm of the morning, then nothing fixed. Day 3 is Kagurazaka's quiet sloped streets with a late start and an open evening. Three gentle days, no cramming.",
+      "tokens": 75
+    },
+    {
+      "id": "e25",
+      "type": "memory_write",
+      "path": "itinerary.md",
+      "content": "# Tokyo - 3 days in November\n\n## Day 1 - Tsukiji & Yanaka\n- Morning: Tsukiji Outer Market, arrive by 9am while stalls are busy and fresh.\n- Afternoon: walk Yanaka's old-town lanes to Nezu Shrine (9:30-16:30, last entry 16:00).\n- Evening: an easy dinner near your hotel. Nothing scheduled.\n\n## Day 2 - Temples, unhurried\n- Late morning: Gotokuji (8:00-16:30), the calm lucky-cat temple out west.\n- Afternoon: nothing fixed - tea, a bookshop, a slow wander.\n\n## Day 3 - Kagurazaka\n- Morning: sleep in.\n- Midday: Kagurazaka's sloped backstreets and small shops.\n- Keep the evening open for your flight or one last meal.",
+      "tokens": 300
+    },
+    {
+      "id": "e26",
+      "type": "assistant_message",
+      "text": "Here's the finished plan. Day 1 is Tsukiji Outer Market in the morning, then Yanaka's quiet temple lanes to Nezu Shrine in the afternoon. Day 2 is an unhurried temple morning at Gotokuji, the lucky-cat temple, with the rest of the day left open. Day 3 is a slow start and a wander through Kagurazaka's backstreets. I confirmed the temple hours before finalizing: Nezu is open 9:30-16:30 and Gotokuji 8:00-16:30. It's three gentle days with nothing crammed, and I've written the whole thing to itinerary.md.",
+      "tokens": 200,
+      "citations": [
+        { "spanStart": 35, "spanEnd": 70, "sourceIds": ["tsukiji-market"] },
+        { "spanStart": 77, "spanEnd": 136, "sourceIds": ["yanaka-guide"] },
+        { "spanStart": 363, "spanEnd": 410, "sourceIds": ["temple-hours"] }
+      ]
+    }
+  ]
+}

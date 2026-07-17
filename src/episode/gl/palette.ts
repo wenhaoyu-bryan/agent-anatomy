@@ -37,14 +37,21 @@ export function categoryOf(type: TraceEvent["type"]): Category {
     case "tool_result":
     case "search":
     case "fetch":
-      // Web retrieval is tool activity — cyan, like every other tool call/result.
+    case "memory_write":
+    case "memory_read":
+      // Web retrieval and memory file I/O are tool activity — cyan, like every
+      // other tool call/result.
       return "tool";
     case "assistant_message":
       return "assistant";
     case "context_evicted":
-      // A bookkeeping event, not window content — treated as system-grey where
-      // it surfaces at all. The eviction's visible drama is the particles that
-      // LEAVE, coloured by whatever they originally were.
+    case "session_break":
+      // Bookkeeping events, not window content — system-grey where they surface.
+      // The drama is the particles that LEAVE, coloured by what they were.
+      return "system";
+    case "compaction":
+      // The summary block is desaturated grey — smaller AND blurrier, the visual
+      // grammar for a lossy compression.
       return "system";
   }
 }
