@@ -725,14 +725,34 @@ behavior, a Tokyo two-session integration test, backward-compat, and 7 rejection
 rules). `pnpm trace:validate` 7 green. `pnpm schema:build` idempotent (regenerated,
 CI git-diff will pass). Demo = read the Tokyo trace as text.
 
-**Blocker flagged (pre-existing, NOT V1): local `pnpm build` fails at vite config
-load.** `@tailwindcss/node@4.3.2`'s ESM bundle imports `enhanced-resolve@5.21.6`
-(CJS) and gets `getType is not a function` — an ESM/CJS named-export interop
-failure under this machine's **Node 22.23.1**. Reproduces on clean `main`, so it
-predates Ep 03 and is unrelated to the schema work. `tsc`, `test`, `trace:validate`,
-and `schema:build` (4 of CI's 5 steps) all pass; only the page-bundling step is
-affected — and V1 is "No UI," so nothing in V1 needs it. CI pins `node-version: 22`
-and shipped Ep 02 green, so CI's cached Node is unaffected. **Must be resolved
-before V2** (the dev server loads the same `vite.config.ts`): pin local Node to a
-working 22.x (add `.nvmrc`) or bump `@tailwindcss/*`. Surfacing to the owner rather
-than mutating deps/lockfile unprompted.
+### Local toolchain (this machine — RESOLVED for dev; read before V2+)
+
+The machine's default Node is **22.23.1**, which breaks two things (both
+pre-existing, both reproduce on clean `main`, neither related to the schema work):
+1. Vite bundling `vite.config.ts` (with `@tailwindcss/vite`) through esbuild
+   mangles `enhanced-resolve`'s CJS interop → `getType is not a function`.
+2. `tsx@4.23.0`'s transformer is broken → `fe.isESM is not a function`.
+
+**Fix: use Node 22.20.0 via `fnm`.** Installed `fnm` (`brew install fnm`) and
+`fnm install 22.20.0`. Run every local pnpm command through it:
+`fnm exec --using 22.20.0 pnpm <script>`. On 22.20.0 the vite config loads with
+the **default** loader (no getType error) and `pnpm dev` / `test` /
+`trace:validate` / `schema:build` all work. **The repo is left CI-identical** — I
+reverted the exploratory `--configLoader runner` + ESM-`dirname` edits; the diff is
+only the V1 schema work. CI pins `node-version: 22` and shipped Ep 02 green, so CI
+is unaffected.
+
+**Known-remaining, NOT a blocker for V1–V3:** the production `pnpm build`
+**prerender** step still fails locally (on both 22.20 and 22.23) because Node
+loading the vite SSR bundle hits a `maath`→`three` CJS/ESM interop
+(`THREE.Vector2 is not a constructor`) — an environment limitation (macOS Tahoe
+arm64), same on `main`. `pnpm dev` never loads that bundle in Node, so V2/V3 are
+verified the Ep-02 way: **dev server + Playwright** (dev server listens on IPv6
+`[::1]:5173`; curl/Playwright must target `localhost`/`[::1]`, and a
+`http_proxy=127.0.0.1:7890` is set — use `--noproxy '*'` / `NO_PROXY`). CI runs the
+full build+prerender (Ep 02 precedent); revisit local prerender at V4 ship if
+needed (candidate: pin `tsx`, or run prerender under the working Node).
+
+Verified V1 gates on 22.20.0: `pnpm test` 63 green, `pnpm trace:validate` 7 green,
+`pnpm schema:build` idempotent, `tsc -b` clean, and both `vite build` stages green
+(4 pages + SSR bundle). V1 committed at 40f1ad1.
