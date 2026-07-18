@@ -56,8 +56,34 @@ back to the source it came from.
 The `1.2` schema adds web `search`, page `fetch` (which may return `unreadable`), a
 top-level `sources` registry, and `citations` binding answer spans to sources — and
 enforces the thesis in the schema itself: *a source can't be cited unless it was
-read.* **Three episodes, one engine, from one backward-compatible format** — the
-proof it generalizes.
+read.*
+
+## Episode 03 — How agents remember
+
+![A crowded, colorful context window collapses into a single small, dim grey block as its token meter drops from 2,225 to 925](./docs/media/compaction.gif)
+
+**[How agents remember](https://wenhaoyu-bryan.github.io/agent-anatomy/episodes/how-agents-remember/)**
+is the season finale, and it settles the series' open wound: **context is not
+memory.** Context is what's in the window right now; memory is what an agent writes
+down *outside* the window so it survives. An agent plans a Tokyo trip across two
+sessions — filling the window with research, compacting it into a smaller, lossy
+summary, saving notes to a file, and ending the day. The next morning, in a fresh
+empty window, it reads those notes back and finishes.
+
+- **Compaction** — a crowded window of research condenses into one dense block,
+  rendered smaller *and* dim and desaturated: the visual grammar for lossy
+  compression. A summary is a trade.
+- **Notes, not neurons** — the window is scratch space that gets wiped; the file is
+  the part the agent can count on tomorrow.
+- **The replay** — play through the `session_break` and the context window *empties
+  completely* while the note persists in the memory panel, then `memory_read` pulls
+  it back into a new session.
+
+The `1.3` schema adds `compaction` (compressing context into a lossy summary),
+`session_break` (emptying the window), and `memory_read`/`memory_write` (notes that
+live outside the window as files) — and enforces that a note is read back
+byte-identical to what was written. **Four episodes, one engine, from one
+backward-compatible format** — the proof it generalizes.
 
 This repo is two products, and both matter:
 

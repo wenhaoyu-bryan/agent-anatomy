@@ -834,3 +834,87 @@ e16 session_break → **box empty, CTX 0/2,400** while `notes/tokyo-trip.md` per
 in the Memory panel; end e26 → box refilled **CTX 1,425/2,400**, both files present.
 Reduced-motion + mobile fallback (→ 2D meter, which already drops at compaction and
 clears at the break) is correct-by-construction; formal audit is V4 per brief.
+
+### V4 — copy, polish, ship (this milestone)
+
+The four missing narrative sections + the peripheral ship work.
+
+- **S2 — the wound recap** (`WoundRecap.tsx`, DOM). Replays 1.5's F2 eviction in
+  miniature using the **2D context-meter's visual grammar** (a full stacked window
+  with the oldest band — the original request — faded out the bottom, tagged "✕
+  evicted") rather than a second WebGL canvas. Flagged tradeoff: the page already
+  runs three canvases (hero + S3 + S5); a fourth would cost budget/TBT for a still
+  the DOM tells cleanly. Ends on the question the episode answers ("so how does
+  anything survive a window that keeps emptying?") + a link to Ep 1.5.
+- **S3 — the compaction share-clip** (`CompactionCanvas.tsx` + `CompactionSection.tsx`).
+  The brief's named distribution asset, built as a **dedicated CSS-sticky pinned,
+  scroll-scrubbed** section (the Ep-02 FunnelSection pattern), NOT re-driving the
+  working S5 canvas — lower regression risk. Self-contained: ~520 colored "read"
+  particles fill the box bottom-up over progress 0→0.42, hold, then over 0.5→1
+  draw down, flare once, and collapse into ~132 dim/desaturated **grey** summary
+  particles (~4× smaller) — the lossy grammar. Everything is a **pure function of
+  scroll progress** (no persistent state), so scrubbing back just re-evaluates;
+  flare is 1.0 at rest so nothing blazes pre-condense. The DOM keeps a token
+  readout that drops **2,225 → 925** in sync + an `sr-only role=status`. Shares the
+  box/BLOCK/particle grammar with S5's `CondensationCanvas` so the two scenes read
+  as one system. Reduced-motion / no-WebGL / SSR → a compact static before/after
+  figure (crowded window → small grey block), no tall scroll area.
+- **S4 — notes, not neurons** (`NotesFigure.tsx`, DOM). A glass context-window box
+  (emptied) beside a persistent `notes/tokyo-trip.md` file card in the Memory
+  panel's language ("outlives →"). The PM thesis in civilian words; the one-line
+  "search notes by meaning" aside is the single allowed RAG nod (brief cap).
+- **S6 — season finale** (`Episode03.tsx` Close). Reframed to "Season finale /
+  Four episodes, one story" with the three-ish-sentence arc recap (works → fails →
+  reads → remembers). The planned-slot pattern is replaced by a **"What should we
+  open up next?" card** → a GitHub issue template
+  (`.github/ISSUE_TEMPLATE/episode-suggestion.md`: topic / what confuses people /
+  what would you want to SEE). Landing: Ep 03 card flipped **LIVE**, and a new
+  clickable dashed **"04 · Suggest a topic"** card (new `status:"suggest"` variant).
+- **Ship**: OG card `public/og/episode-03.png` (1200×630, the condensation motif +
+  "CTX 2,225 → 925 · COMPACTED", built from an HTML card served over http with the
+  @fontsource woff2 copied in, screenshotted — the meta was already wired in V2);
+  README gains an Episode 03 section + `docs/media/compaction.gif` (760×486, 388 KB,
+  6 real frames captured off the S3 canvas across the scrub, ffmpeg two-pass
+  palette) + the "four episodes, one engine" line; `llms.txt` gains the Ep 03
+  summary + page link + the 1.3 schema line + "Four episodes"; `docs/launch.md`
+  gains a fourth-launch (season-finale) section — clip-first X thread, angle "your
+  AI doesn't remember you — here's what it does instead", + the compaction-clip
+  recording recipe.
+
+Audit gate (review-animations + web-design-guidelines + writing-guidelines): the
+tier-3 skills still don't register in this session (consistent with every prior
+milestone) — ran the checklists manually. **No severity-medium-or-above findings.**
+- Motion: S3 is deterministic + scrub-safe (pure fn of progress), flare 1.0 at rest,
+  bloom threshold 1, frameloop `never` off-screen (IntersectionObserver), CSS-sticky
+  pin (no scroll-jacking), reduced-motion → static figure. Caption uses the reused
+  360ms one-shot, not a perpetual loop.
+- Web/a11y: h1→h2 order kept; new sections carry `aria-labelledby`; canvas is
+  `aria-hidden` with an `sr-only role=status` token readout; decorative figures
+  `aria-hidden`; palette strictly §6 (the lossy grey is `--color-muted`, no new
+  colors); color never the sole signal (token readout + captions are text);
+  text-balance on new h2s; suggest links covered by the global focus-visible ring.
+- Writing pass: copy is active, sentence-case, hedge-free; em dashes stay (house
+  voice). Fixed two straight apostrophes in visible prose → curly (landing suggest
+  blurb, Ep 1.5 series blurb). The `notes/tokyo-trip.md` `<pre>` keeps straight
+  apostrophes on purpose — it's raw file content and matches the trace's own style.
+
+Reduced-motion + mobile verified: the prerendered ep03 HTML (= the no-JS/reduced
+path) contains the S3 static figure + the wound/notes/finale DOM and **no `<canvas>`**;
+mobile 390×844 has no horizontal overflow (scrollWidth == 390), the S3 heading wraps
+with the CTX readout tucked top-right, the box fits, replay tabs + 3 canvases render.
+
+§1 budgets re-measured (gzip of the exact chunks each page loads, all lazy canvases
+triggered): **ep03 412.8 KB**, **ep1.5 407.2 KB** (the hero fix adds ~1 KB — three
+was already pulled by EvictionCanvas), ep01/ep02 untouched by the episode changes
+(ep02 was 401). All four under the 450 KB gz budget. 63 tests green, 7 traces
+validate, CI body-grep sentinel present. **Episode 03 is feature-complete.**
+
+### Cross-cut bug fix — Ep 1.5 hero had no ambient (committed separately, d6603be)
+
+Owner spotted that 01/02/03 heroes animate (the drifting particle field + loop
+motif) but 1.5's is static. Verdict: **not intentional** — the brief asks for the
+"same identity" with a darker mood; 1.5 shipped static only because the reusable
+`HeroAmbient` didn't exist yet when it was built (introduced later in Ep 02), and it
+was never retrofitted. Fix: added `<HeroAmbient />` under the existing vignette (mood
+preserved). Verified live: hero canvas mounts (2100×1431), 0 console errors, budget
+still 407 KB.

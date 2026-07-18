@@ -2,6 +2,9 @@ import { traceSchema } from "../trace/schema";
 import { MotionRoot } from "../episode/scroll/MotionRoot";
 import { MemoryReplay } from "./MemoryReplay";
 import { HeroAmbient } from "../episode02/HeroAmbient";
+import { WoundRecap } from "./WoundRecap";
+import { CompactionSection } from "./CompactionSection";
+import { NotesFigure } from "./NotesFigure";
 import tokyoTripRaw from "../../traces/tokyo-trip.trace.json";
 
 // Validated at load so a bad trace edit fails loudly in dev, like Episode 01.
@@ -13,11 +16,12 @@ const EPISODE_15 = `${HOME_URL}episodes/where-agents-go-wrong/`;
 const EPISODE_02 = `${HOME_URL}episodes/how-ai-reads-the-web/`;
 const REPO_URL = "https://github.com/wenhaoyu-bryan/agent-anatomy";
 const PORTFOLIO_URL = "https://wenhaoyu-bryan.github.io/";
+const SUGGEST_URL = `${REPO_URL}/issues/new?template=episode-suggestion.md`;
 
 /**
  * Episode 03 shell — "How agents remember" (PLAN §6 palette, no new colors).
- * V2 builds the hero and the S5 replay showpiece; the S2 recap, S4 figure, and
- * the S6 finale arrive in V3/V4.
+ * The full page: hero, the S2 wound recap, the S3 compaction share-clip, the S4
+ * notes-not-neurons figure, the S5 replay showpiece, and the S6 season finale.
  */
 export function Episode03() {
   return (
@@ -30,6 +34,9 @@ export function Episode03() {
       </a>
       <main id="main">
         <Hero />
+        <WoundRecap />
+        <CompactionSection />
+        <NotesFigure />
         <MemoryReplay trace={tokyoTrip} />
         <Close />
       </main>
@@ -86,15 +93,22 @@ function Close() {
     <section id="debrief" aria-labelledby="debrief-title" className="px-4 py-28 md:px-6">
       <div className="mx-auto w-full max-w-4xl">
         <div className="reveal">
-          <p className="micro-label">The series</p>
+          <p className="micro-label">Season finale</p>
           <h2
             id="debrief-title"
             className="mt-3 max-w-2xl text-3xl font-medium tracking-tight text-balance md:text-4xl"
             style={{ fontFamily: "var(--font-display)" }}
           >
-            Four episodes, one engine
+            Four episodes, one story
           </h2>
-          <ul className="mt-6 flex flex-col gap-3">
+          <p className="mt-4 max-w-2xl leading-relaxed text-[var(--color-muted)]">
+            This is where the first season ends. You watched an agent run its loop and fill a context
+            window; you watched that window overflow, loop, and get fooled; you watched it search the
+            web and cite what it read; and just now, you watched it compress its memory, run out of
+            session, and pick the work back up from a note it left itself. One loop, one window, one
+            trace format — four ways of looking at the same machine.
+          </p>
+          <ul className="mt-8 flex flex-col gap-3">
             <SeriesLink
               href={EPISODE_01}
               n="01"
@@ -105,7 +119,7 @@ function Close() {
               href={EPISODE_15}
               n="1.5"
               title="Where agents go wrong"
-              blurb="Three failure modes — a loop it can't escape, a memory that overflows, a false signal it almost trusts."
+              blurb="Three failure modes — a loop it can’t escape, a memory that overflows, a false signal it almost trusts."
             />
             <SeriesLink
               href={EPISODE_02}
@@ -128,6 +142,28 @@ function Close() {
                   </p>
                 </div>
               </div>
+            </li>
+            <li>
+              <a
+                href={SUGGEST_URL}
+                className="group block rounded-lg border border-dashed border-[var(--color-hairline)] px-5 py-4 transition-colors hover:border-[var(--color-tool)]"
+              >
+                <div className="flex items-baseline gap-4">
+                  <span className="shrink-0 font-mono tabular-nums text-[var(--color-muted)]">04</span>
+                  <div>
+                    <p
+                      className="font-medium text-[var(--color-muted)] transition-colors group-hover:text-[var(--color-ink)]"
+                      style={{ fontFamily: "var(--font-display)" }}
+                    >
+                      What should we open up next? →
+                    </p>
+                    <p className="mt-1 text-sm text-[var(--color-muted)]">
+                      No fixed episode 04 — the series stays open. Tell us what confuses people about
+                      agents and what you’d want to see.
+                    </p>
+                  </div>
+                </div>
+              </a>
             </li>
           </ul>
         </div>
