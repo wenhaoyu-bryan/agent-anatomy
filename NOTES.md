@@ -801,3 +801,36 @@ e19 memory_read → context rebuilds (+260), note still present; e26 end → bot
 timeline shows "Session A"/"Session B" + "The next day". tsc clean; 63 tests still
 green. Deferred to V4 audit per brief: reduced-motion + mobile-tabs pass. WebGL
 condensation + window-empty scene is V3.
+
+### V3 — WebGL condensation + window-emptying scene (this milestone)
+
+The Context panel's 2D meter is now backed by a particle scene, modeled 1:1 on
+Ep 1.5's F2 (`EvictionCanvas` + `F2ContextPanel`) — one token = one instanced
+icosahedron, bloom on HDR (`multiplyScalar` while in motion), deterministic seeded
+positions, forward-eases / rewind-snaps for scrub safety. Two new files, no new
+deps, no shared-component or prior-episode changes (only `ContextMeter2D` gained an
+`export` on its `MeterFooter` so the WebGL panel reuses the exact same footer copy):
+
+- **`CondensationCanvas.tsx`** — `buildModel(trace)` tags every particle with
+  `arriveFrame`, `compactFrame` (the reads the compaction replaces), `clearFrame`
+  (the `session_break` that drains its session), `isSummary`, and a `group` so each
+  session fills its own bottom-up strata in the same box. Two tau transitions off
+  the cursor: **condense** (`tauC`, cursor ≥ compaction index) and **empty** (`tauB`,
+  cursor ≥ break index). Compacted reads converge on a small low ellipsoid, flare
+  once, and vanish; the summary particles grow into that same dense block, **dim +
+  desaturated grey** (`categoryOf → system`) = the lossy grammar (smaller AND
+  duller than what it replaced). At the break every surviving particle rises and
+  fades → empty box; session B then refills from scratch.
+- **`MemoryContextPanel.tsx`** — the F2 pattern: `supportsWebGL() && !reduced` →
+  lazy canvas gated behind `requestIdleCallback`; otherwise `<ContextMeter2D/>`.
+  Keeps the CTX token header + legend (adds a "compressed" grey swatch) + shared
+  `MeterFooter`. Swapped into `MemoryReplay`'s Context panel.
+
+**Verified in-browser** (build + preview + Playwright, 0 console errors; the only
+warnings are three.js's `THREE.Clock` deprecation, present on Ep 1.5/02 too):
+peak e12 → box near-full, **CTX 2,225/2,400**; e13 compaction → cyan reads collapse
+into a small **grey block**, **CTX 925/2,400**, footer "6 items compressed … −1300";
+e16 session_break → **box empty, CTX 0/2,400** while `notes/tokyo-trip.md` persists
+in the Memory panel; end e26 → box refilled **CTX 1,425/2,400**, both files present.
+Reduced-motion + mobile fallback (→ 2D meter, which already drops at compaction and
+clears at the break) is correct-by-construction; formal audit is V4 per brief.

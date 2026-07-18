@@ -4,7 +4,7 @@ import { Controls } from "../episode/replay/Controls";
 import { Timeline } from "../episode/replay/Timeline";
 import { LoopIndicator } from "../episode/replay/LoopIndicator";
 import { TranscriptPanel } from "../episode/replay/TranscriptPanel";
-import { ContextMeter2D } from "../episode/replay/ContextMeter2D";
+import { MemoryContextPanel } from "./MemoryContextPanel";
 import { MemoryPanel } from "./MemoryPanel";
 import type { Trace } from "../trace/schema";
 
@@ -21,8 +21,9 @@ const TABS: Array<{ id: TabId; label: string }> = [
  * the third panel now the MEMORY layer (files that live outside the window).
  * The dramatic beat is the session break: play through it and the context meter
  * empties to nothing while the memory file stays put. User-driven (buttons +
- * scrubber + autoplay), never tied to scroll. The context panel is the 2D meter
- * here; the WebGL condensation + window-emptying scene lands in V3.
+ * scrubber + autoplay), never tied to scroll. The context panel renders the
+ * WebGL condensation + window-emptying scene, degrading to the 2D meter when
+ * WebGL is unavailable or motion is reduced.
  */
 export function MemoryReplay({ trace }: { trace: Trace }) {
   const [tab, setTab] = useState<TabId>("transcript");
@@ -92,7 +93,7 @@ export function MemoryReplay({ trace }: { trace: Trace }) {
               <TranscriptPanel />
             </Panel>
             <Panel id="context" title="Context window" activeTab={tab}>
-              <ContextMeter2D />
+              <MemoryContextPanel />
             </Panel>
             <Panel id="memory" title="Memory (files)" activeTab={tab} scroll>
               <MemoryPanel />

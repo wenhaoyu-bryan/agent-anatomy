@@ -74,7 +74,7 @@ export function ContextMeter2D() {
 }
 
 /** One line describing what the current event did to the window. */
-function MeterFooter({ event }: { event: import("../../trace/schema").TraceEvent }) {
+export function MeterFooter({ event }: { event: import("../../trace/schema").TraceEvent }) {
   if (event.type === "context_evicted") {
     const n = event.evictedEventIds.length;
     return (
