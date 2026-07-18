@@ -1,5 +1,6 @@
 import { traceSchema } from "../trace/schema";
 import { MotionRoot } from "../episode/scroll/MotionRoot";
+import { HeroAmbient } from "../episode02/HeroAmbient";
 import { RecapFigure } from "./RecapFigure";
 import { Vignette } from "./Vignette";
 import loopTrapRaw from "../../traces/the-loop-trap.trace.json";
@@ -63,6 +64,9 @@ export function Episode15() {
 function Hero() {
   return (
     <section className="relative flex min-h-dvh flex-col justify-center overflow-hidden px-6">
+      {/* Same ambient drift + loop motif as the rest of the series (S1 identity);
+          the vignette below keeps this episode's darker mood. */}
+      <HeroAmbient />
       <div
         className="telemetry-grid pointer-events-none absolute inset-0 z-[2]"
         aria-hidden="true"
