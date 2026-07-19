@@ -14,6 +14,10 @@ export const EVENT_META: Record<TraceEvent["type"], { label: string; color: stri
   context_evicted: { label: "EVICT", color: "var(--color-muted)" },
   search: { label: "SEARCH", color: "var(--color-tool)" },
   fetch: { label: "FETCH", color: "var(--color-tool)" },
+  compaction: { label: "COMPACT", color: "var(--color-muted)" },
+  session_break: { label: "SESSION", color: "var(--color-muted)" },
+  memory_write: { label: "WRITE", color: "var(--color-tool)" },
+  memory_read: { label: "READ", color: "var(--color-tool)" },
 };
 
 export function eventBody(event: TraceEvent): string {
@@ -40,6 +44,14 @@ export function eventBody(event: TraceEvent): string {
       return event.status === "unreadable"
         ? `Couldn't read ${event.url} — the page returned no readable text.`
         : (event.extracted ?? `Read ${event.url}.`);
+    case "compaction":
+      return event.summary;
+    case "session_break":
+      return event.label;
+    case "memory_write":
+      return `Saved a durable note to ${event.path}.`;
+    case "memory_read":
+      return `Read ${event.path} back into the window.`;
   }
 }
 

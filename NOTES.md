@@ -650,3 +650,271 @@ under 450, no regression to Ep 01/1.5.
 Verified: `pnpm test` 46 green, `pnpm trace:validate` 6 green, schema diff clean,
 full `pnpm build` green (four pages prerender), CI greps pass. Episode 02 is
 feature-complete on `feature/episode-02`.
+
+## Episode 03 — "How Agents Remember" (full episode; brief: EPISODE-03-BRIEF.md)
+
+Milestones V1–V4. Feature branch `feature/episode-03`, PR + demo per milestone
+(brief says "stop and demo after each"). The resolution of the series' open wound
+(1.5's F2 eviction): context is what's in the window now; memory is what gets
+written down outside it and survives.
+
+### V1 — schema 1.3 + two-session Tokyo trace (this milestone)
+
+Schema bumped to **1.3**, backward compatible (1.0/1.1/1.2 validate and render
+unchanged; a dedicated test re-validates all six prior traces and asserts their
+versions are untouched). Four new optional event types:
+
+- **`compaction`** `{ replacesEventIds[], summary, tokensBefore, tokens }` — the
+  replaced items collapse into one summary item (the event itself). Folds like an
+  eviction plus an insert: net window change `tokens − tokensBefore`.
+- **`session_break`** `{ label, tokens: 0 }` — empties the window (running → 0,
+  live → []); only the artifact file layer survives.
+- **`memory_write`** / **`memory_read`** `{ path, content }` — a note is a file;
+  write patches it onto the artifact snapshot, read pulls it back into the window.
+
+**Key design call — every new event keeps a `tokens` field (the invariant).**
+The brief's TS sketches `session_break`/`compaction` without a plain `tokens`, but
+every existing component (`ContextScene`, `ContextMeter2D`, `TranscriptPanel`,
+`EvictionCanvas`, …) reads `event.tokens` on values typed as `TraceEvent`. A
+token-less union member would break `tsc` across Ep 01/1.5/02 — exactly the
+prior-episode collateral the brief puts out of scope. So: `session_break.tokens`
+is enforced `=== 0` (a break costs nothing), and `compaction`'s base `tokens` IS
+the brief's `tokensAfter` (the summary is an ordinary window item; its post-size
+is its `tokens`, like every other event) — so there is **no separate `tokensAfter`
+field**, only the extra `tokensBefore`. Flagged naming deviation, documented in
+the changelog. Zero prior-episode logic changed.
+
+**Schema fold (superRefine) additions**, folding alongside the existing token math:
+- compaction: `replacesEventIds` must be live; `tokensBefore` must equal their
+  summed tokens (mirrors the eviction reclaim check); `tokens < tokensBefore` (a
+  compaction must shrink). The summary becomes a live item (can be evicted later).
+- session_break: `tokens === 0`; clears the live set + running total.
+- memory: track a `files` map (seeded from `initialArtifact.files`, replaced by a
+  `tool_result` snapshot, patched by `memory_write`); a `memory_read` must
+  reference a written path and its `content` must be **byte-identical** to the
+  file — the thesis ("you read back exactly what you wrote"), schema-enforced.
+- version gate: the four new types are rejected in a <1.3 trace (mirrors 1.1/1.2).
+
+**Engine** (`replay.ts`): three new fold branches. compaction filters the replaced
+ids and pushes itself as the summary item, `tokensUsed += tokens − tokensBefore`;
+session_break sets `live = []`, `tokensUsed = 0` (files untouched — the point);
+memory_write derives a new artifact snapshot with the note patched into `files`.
+`sourceStates`/citations logic unchanged, kept monotonic across the break (a
+citation asserts "read at some point in this run"; the final answer cites session-A
+reads + the session-B lookup, all valid). Exhaustive switches updated:
+`eventMeta.ts` (labels COMPACT/SESSION/WRITE/READ + `eventBody`), `palette.ts`
+(compaction/session_break → system-grey = desaturated/lossy; memory I/O → tool cyan).
+
+**The trace** (`traces/tokyo-trip.trace.json`, 26 events, v1.3, window 2400):
+"Plan a 3-day Tokyo trip." **Session A (e01–e16):** research burst — 2 searches +
+4 fetches (Yanaka guide, quiet-temples, Tsukiji market, November) fill the window
+to **peak 2225/2400 (93%)**; the agent notices it's running out (e12), compacts
+the six research events (tokensBefore 1730 → tokens 430, ≈4×) so the window drops
+sharply to 925, writes `notes/tokyo-trip.md`, reports day-1 progress, then
+`session_break` "The next day". **Session B (e17–e26):** empty window; the agent
+states plainly it doesn't remember, reads the note back (byte-identical), and — the
+lossiness payoff — the summary had kept "some temples close early midweek" but
+DROPPED the exact hours, which it now recovers with one fetch of a `temple-hours`
+page; finishes days 2–3, writes `itinerary.md` (artifact heals), and answers with
+citations to the pages it read. The `travelbuzz-blog` (30-stops) is found but never
+read — selection lesson tied to the user's "don't want to cram." Citation offsets
+computed against the exact answer string and asserted by the schema.
+
+Tests: 63 green (was 46; +17 for 1.3 — compaction/session_break/memory engine
+behavior, a Tokyo two-session integration test, backward-compat, and 7 rejection
+rules). `pnpm trace:validate` 7 green. `pnpm schema:build` idempotent (regenerated,
+CI git-diff will pass). Demo = read the Tokyo trace as text.
+
+### Local toolchain (this machine — FULLY RESOLVED; read before V2+)
+
+Two problems, now both fixed:
+1. **Default Node 22.23.1** made `vite build` fail at config load
+   (`@tailwindcss/vite` → `enhanced-resolve` "getType is not a function", a CJS
+   interop failure). **Fix: run everything on Node 22.20.0 via `fnm`** —
+   installed `fnm` (`brew install fnm`) + `fnm install 22.20.0`; prefix commands
+   with `fnm exec --using 22.20.0 pnpm <script>`.
+2. **Stale/corrupted `node_modules`** made a whole cascade of deps fail at
+   ESM/CJS interop at build/runtime (`tsx` "fe.isESM", `maath`→`three`
+   "Vector2 is not a constructor" in prerender, `react-dom` "createRoot is not a
+   function" so no React page — not even the live Ep 02 — would mount).
+   **Fix: clean reinstall** — `rm -rf node_modules && fnm exec --using 22.20.0
+   pnpm install --frozen-lockfile` (2s from the store). After it, the FULL
+   `pnpm build` is green: 5 pages bundled + all 5 prerendered, and preview-served
+   pages mount with 0 console errors.
+
+**Repo left CI-identical** — no `--configLoader runner` / ESM-`dirname` hacks
+(reverted); the diff is only the episode work. CI pins `node-version: 22` and does
+a fresh `pnpm install`, so CI is unaffected either way.
+
+**Verification loop for V2+: `vite build` → `vite preview --port 4173` →
+Playwright.** (The `pnpm dev` HMR server still throws a babel/`browserslist`
+"findConfigFile" error — didn't chase it since build+preview works.) preview binds
+IPv6; target `localhost`/`[::1]:4173`. A `http_proxy=127.0.0.1:7890` is set — use
+`--noproxy '*'` / `NO_PROXY`. Playwright profile can get a stale
+`SingletonLock` — `pkill -f ms-playwright-mcp` + delete the lock if "browser
+already in use". See [[reference_agent_anatomy_node_toolchain]].
+
+Verified V1 gates on 22.20.0 + fresh install: `pnpm test` 63 green,
+`pnpm trace:validate` 7 green, `pnpm schema:build` idempotent, `tsc -b` clean,
+full `pnpm build` green (5 pages prerender). V1 committed at 40f1ad1.
+
+### V2 — replay rig, two sessions, DOM/2D (this milestone)
+
+New page `episodes/how-agents-remember/` (`src/episode03/`), wired like Ep 02:
+`vite.config` input, `entry-server.renderEpisode03`, `prerender.ts` inject, and a
+body-only CI grep ("reads those notes back and finishes the job"). Hero + S5
+`MemoryReplay` showpiece + a minimal series-index close; the S2 recap, S4 figure,
+and full S6 finale come in V3/V4 (Ep-02's U2 pattern).
+
+**Rig** (`MemoryReplay.tsx`) — Ep-01's three-panel rig, third panel now the
+MEMORY layer: **Transcript | Context window (2D meter) | Memory (files)**. The
+two-session timeline, compaction, and the session break are all rendered by
+extending the SHARED components (backward compatible — verified Ep 01/1.5/02
+still play):
+
+- **`Timeline.tsx`** — `computeSegments()` splits the run at each `session_break`
+  into labelled segments ("Session A" / "Session B · The next day", flex-sized by
+  event count, current segment highlighted). Traces with no break yield one
+  unlabelled segment, so every prior episode is unchanged.
+- **`TranscriptPanel.tsx`** — dimming is now driven by `frame.contextItems` (the
+  live set the engine already folds), which cleanly covers eviction, compaction,
+  AND the session break (after a break, all of session A dims — it's out of the
+  window but still in the log). New `EventText` for compaction (summary + "compressed
+  N items"), session_break (a divider rule with the label), and memory_write/read.
+  A `TokenDelta` badge shows `−(before−after)` for compaction and "cleared" for a break.
+- **`ContextMeter2D.tsx`** — a `MeterFooter` helper adds compaction ("N items
+  compressed into a summary · −tokens") and session_break ("Session ended — the
+  window is empty now"); the stacked bar empties on its own at a break because
+  `contextItems` is `[]`.
+- **`MemoryPanel.tsx`** (new, Ep-03) — renders `frame.artifact.files` as file
+  cards (README filtered out as scaffolding), highlights the file being written/
+  read, and shows a "New session — the window is empty. The notes below are still
+  here." banner on the break frame. This is the DOM truth the V3 WebGL scene will
+  dramatize.
+
+**Verified in-browser** (build + preview + Playwright, 0 console errors): seeking
+the timeline to each beat — e13 compaction → **CTX 925/2400**, footer "6 items
+compressed … −1300 tokens", 7 live blocks; **e16 session_break → CTX 0/2400, empty
+bar**, memory panel still shows `notes/tokyo-trip.md` + the empty-window banner;
+e19 memory_read → context rebuilds (+260), note still present; e26 end → both
+`notes/tokyo-trip.md` and `itinerary.md` present (artifact heals). Two-session
+timeline shows "Session A"/"Session B" + "The next day". tsc clean; 63 tests still
+green. Deferred to V4 audit per brief: reduced-motion + mobile-tabs pass. WebGL
+condensation + window-empty scene is V3.
+
+### V3 — WebGL condensation + window-emptying scene (this milestone)
+
+The Context panel's 2D meter is now backed by a particle scene, modeled 1:1 on
+Ep 1.5's F2 (`EvictionCanvas` + `F2ContextPanel`) — one token = one instanced
+icosahedron, bloom on HDR (`multiplyScalar` while in motion), deterministic seeded
+positions, forward-eases / rewind-snaps for scrub safety. Two new files, no new
+deps, no shared-component or prior-episode changes (only `ContextMeter2D` gained an
+`export` on its `MeterFooter` so the WebGL panel reuses the exact same footer copy):
+
+- **`CondensationCanvas.tsx`** — `buildModel(trace)` tags every particle with
+  `arriveFrame`, `compactFrame` (the reads the compaction replaces), `clearFrame`
+  (the `session_break` that drains its session), `isSummary`, and a `group` so each
+  session fills its own bottom-up strata in the same box. Two tau transitions off
+  the cursor: **condense** (`tauC`, cursor ≥ compaction index) and **empty** (`tauB`,
+  cursor ≥ break index). Compacted reads converge on a small low ellipsoid, flare
+  once, and vanish; the summary particles grow into that same dense block, **dim +
+  desaturated grey** (`categoryOf → system`) = the lossy grammar (smaller AND
+  duller than what it replaced). At the break every surviving particle rises and
+  fades → empty box; session B then refills from scratch.
+- **`MemoryContextPanel.tsx`** — the F2 pattern: `supportsWebGL() && !reduced` →
+  lazy canvas gated behind `requestIdleCallback`; otherwise `<ContextMeter2D/>`.
+  Keeps the CTX token header + legend (adds a "compressed" grey swatch) + shared
+  `MeterFooter`. Swapped into `MemoryReplay`'s Context panel.
+
+**Verified in-browser** (build + preview + Playwright, 0 console errors; the only
+warnings are three.js's `THREE.Clock` deprecation, present on Ep 1.5/02 too):
+peak e12 → box near-full, **CTX 2,225/2,400**; e13 compaction → cyan reads collapse
+into a small **grey block**, **CTX 925/2,400**, footer "6 items compressed … −1300";
+e16 session_break → **box empty, CTX 0/2,400** while `notes/tokyo-trip.md` persists
+in the Memory panel; end e26 → box refilled **CTX 1,425/2,400**, both files present.
+Reduced-motion + mobile fallback (→ 2D meter, which already drops at compaction and
+clears at the break) is correct-by-construction; formal audit is V4 per brief.
+
+### V4 — copy, polish, ship (this milestone)
+
+The four missing narrative sections + the peripheral ship work.
+
+- **S2 — the wound recap** (`WoundRecap.tsx`, DOM). Replays 1.5's F2 eviction in
+  miniature using the **2D context-meter's visual grammar** (a full stacked window
+  with the oldest band — the original request — faded out the bottom, tagged "✕
+  evicted") rather than a second WebGL canvas. Flagged tradeoff: the page already
+  runs three canvases (hero + S3 + S5); a fourth would cost budget/TBT for a still
+  the DOM tells cleanly. Ends on the question the episode answers ("so how does
+  anything survive a window that keeps emptying?") + a link to Ep 1.5.
+- **S3 — the compaction share-clip** (`CompactionCanvas.tsx` + `CompactionSection.tsx`).
+  The brief's named distribution asset, built as a **dedicated CSS-sticky pinned,
+  scroll-scrubbed** section (the Ep-02 FunnelSection pattern), NOT re-driving the
+  working S5 canvas — lower regression risk. Self-contained: ~520 colored "read"
+  particles fill the box bottom-up over progress 0→0.42, hold, then over 0.5→1
+  draw down, flare once, and collapse into ~132 dim/desaturated **grey** summary
+  particles (~4× smaller) — the lossy grammar. Everything is a **pure function of
+  scroll progress** (no persistent state), so scrubbing back just re-evaluates;
+  flare is 1.0 at rest so nothing blazes pre-condense. The DOM keeps a token
+  readout that drops **2,225 → 925** in sync + an `sr-only role=status`. Shares the
+  box/BLOCK/particle grammar with S5's `CondensationCanvas` so the two scenes read
+  as one system. Reduced-motion / no-WebGL / SSR → a compact static before/after
+  figure (crowded window → small grey block), no tall scroll area.
+- **S4 — notes, not neurons** (`NotesFigure.tsx`, DOM). A glass context-window box
+  (emptied) beside a persistent `notes/tokyo-trip.md` file card in the Memory
+  panel's language ("outlives →"). The PM thesis in civilian words; the one-line
+  "search notes by meaning" aside is the single allowed RAG nod (brief cap).
+- **S6 — season finale** (`Episode03.tsx` Close). Reframed to "Season finale /
+  Four episodes, one story" with the three-ish-sentence arc recap (works → fails →
+  reads → remembers). The planned-slot pattern is replaced by a **"What should we
+  open up next?" card** → a GitHub issue template
+  (`.github/ISSUE_TEMPLATE/episode-suggestion.md`: topic / what confuses people /
+  what would you want to SEE). Landing: Ep 03 card flipped **LIVE**, and a new
+  clickable dashed **"04 · Suggest a topic"** card (new `status:"suggest"` variant).
+- **Ship**: OG card `public/og/episode-03.png` (1200×630, the condensation motif +
+  "CTX 2,225 → 925 · COMPACTED", built from an HTML card served over http with the
+  @fontsource woff2 copied in, screenshotted — the meta was already wired in V2);
+  README gains an Episode 03 section + `docs/media/compaction.gif` (760×486, 388 KB,
+  6 real frames captured off the S3 canvas across the scrub, ffmpeg two-pass
+  palette) + the "four episodes, one engine" line; `llms.txt` gains the Ep 03
+  summary + page link + the 1.3 schema line + "Four episodes"; `docs/launch.md`
+  gains a fourth-launch (season-finale) section — clip-first X thread, angle "your
+  AI doesn't remember you — here's what it does instead", + the compaction-clip
+  recording recipe.
+
+Audit gate (review-animations + web-design-guidelines + writing-guidelines): the
+tier-3 skills still don't register in this session (consistent with every prior
+milestone) — ran the checklists manually. **No severity-medium-or-above findings.**
+- Motion: S3 is deterministic + scrub-safe (pure fn of progress), flare 1.0 at rest,
+  bloom threshold 1, frameloop `never` off-screen (IntersectionObserver), CSS-sticky
+  pin (no scroll-jacking), reduced-motion → static figure. Caption uses the reused
+  360ms one-shot, not a perpetual loop.
+- Web/a11y: h1→h2 order kept; new sections carry `aria-labelledby`; canvas is
+  `aria-hidden` with an `sr-only role=status` token readout; decorative figures
+  `aria-hidden`; palette strictly §6 (the lossy grey is `--color-muted`, no new
+  colors); color never the sole signal (token readout + captions are text);
+  text-balance on new h2s; suggest links covered by the global focus-visible ring.
+- Writing pass: copy is active, sentence-case, hedge-free; em dashes stay (house
+  voice). Fixed two straight apostrophes in visible prose → curly (landing suggest
+  blurb, Ep 1.5 series blurb). The `notes/tokyo-trip.md` `<pre>` keeps straight
+  apostrophes on purpose — it's raw file content and matches the trace's own style.
+
+Reduced-motion + mobile verified: the prerendered ep03 HTML (= the no-JS/reduced
+path) contains the S3 static figure + the wound/notes/finale DOM and **no `<canvas>`**;
+mobile 390×844 has no horizontal overflow (scrollWidth == 390), the S3 heading wraps
+with the CTX readout tucked top-right, the box fits, replay tabs + 3 canvases render.
+
+§1 budgets re-measured (gzip of the exact chunks each page loads, all lazy canvases
+triggered): **ep03 412.8 KB**, **ep1.5 407.2 KB** (the hero fix adds ~1 KB — three
+was already pulled by EvictionCanvas), ep01/ep02 untouched by the episode changes
+(ep02 was 401). All four under the 450 KB gz budget. 63 tests green, 7 traces
+validate, CI body-grep sentinel present. **Episode 03 is feature-complete.**
+
+### Cross-cut bug fix — Ep 1.5 hero had no ambient (committed separately, d6603be)
+
+Owner spotted that 01/02/03 heroes animate (the drifting particle field + loop
+motif) but 1.5's is static. Verdict: **not intentional** — the brief asks for the
+"same identity" with a darker mood; 1.5 shipped static only because the reusable
+`HeroAmbient` didn't exist yet when it was built (introduced later in Ep 02), and it
+was never retrofitted. Fix: added `<HeroAmbient />` under the existing vignette (mood
+preserved). Verified live: hero canvas mounts (2100×1431), 0 console errors, budget
+still 407 KB.

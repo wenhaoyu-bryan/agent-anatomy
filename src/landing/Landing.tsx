@@ -1,6 +1,9 @@
 const EPISODE_URL = `${import.meta.env.BASE_URL}episodes/how-an-agent-works/`;
 const EPISODE_1_5_URL = `${import.meta.env.BASE_URL}episodes/where-agents-go-wrong/`;
 const EPISODE_02_URL = `${import.meta.env.BASE_URL}episodes/how-ai-reads-the-web/`;
+const EPISODE_03_URL = `${import.meta.env.BASE_URL}episodes/how-agents-remember/`;
+const SUGGEST_URL =
+  "https://github.com/wenhaoyu-bryan/agent-anatomy/issues/new?template=episode-suggestion.md";
 
 export function Landing() {
   return (
@@ -44,7 +47,20 @@ export function Landing() {
             href={EPISODE_02_URL}
             status="live"
           />
-          <EpisodeCard number="03" title="To be announced" blurb="" status="planned" />
+          <EpisodeCard
+            number="03"
+            title="How agents remember"
+            blurb="Compaction, session breaks, and the notes an agent writes to itself so work survives an empty window."
+            href={EPISODE_03_URL}
+            status="live"
+          />
+          <EpisodeCard
+            number="04"
+            title="What should we open up next?"
+            blurb="Season one is done — the series stays open. Suggest a topic you’d want to see."
+            href={SUGGEST_URL}
+            status="suggest"
+          />
         </section>
 
         <footer className="mt-auto pt-16">
@@ -62,24 +78,29 @@ type EpisodeCardProps = {
   title: string;
   blurb: string;
   href?: string;
-  status: "live" | "assembly" | "planned";
+  status: "live" | "assembly" | "planned" | "suggest";
 };
 
 const STATUS_META = {
   live: { label: "Live", color: "var(--color-success)" },
   assembly: { label: "In assembly", color: "var(--color-muted)" },
   planned: { label: "Planned", color: "var(--color-muted)" },
+  suggest: { label: "Open", color: "var(--color-tool)" },
 } as const;
 
 function EpisodeCard({ number, title, blurb, href, status }: EpisodeCardProps) {
   const isLive = status === "live";
+  const isSuggest = status === "suggest";
+  const linkable = (isLive || isSuggest) && !!href;
   const meta = STATUS_META[status];
   const inner = (
     <div
-      className={`flex items-baseline gap-5 rounded-lg border border-[var(--color-hairline)] bg-[var(--color-panel)] p-5 transition-colors duration-300 md:p-6 ${
-        isLive ? "hover:border-[var(--color-muted)]" : ""
+      className={`flex items-baseline gap-5 rounded-lg border bg-[var(--color-panel)] p-5 transition-colors duration-300 md:p-6 ${
+        isSuggest
+          ? "border-dashed border-[var(--color-hairline)] hover:border-[var(--color-tool)]"
+          : `border-[var(--color-hairline)] ${isLive ? "hover:border-[var(--color-muted)]" : ""}`
       }`}
-      style={{ opacity: isLive ? 1 : 0.42 }}
+      style={{ opacity: isLive || isSuggest ? 1 : 0.42 }}
     >
       <span
         className="shrink-0 text-2xl tabular-nums md:text-3xl"
@@ -92,7 +113,13 @@ function EpisodeCard({ number, title, blurb, href, status }: EpisodeCardProps) {
       </span>
       <div className="min-w-0">
         <div className="flex items-center gap-3">
-          <h2 className="text-lg font-medium md:text-xl" style={{ fontFamily: "var(--font-display)" }}>
+          <h2
+            className="text-lg font-medium md:text-xl"
+            style={{
+              fontFamily: "var(--font-display)",
+              color: isSuggest ? "var(--color-muted)" : undefined,
+            }}
+          >
             {title}
           </h2>
           <span className="micro-label flex items-center gap-1.5">
@@ -109,7 +136,7 @@ function EpisodeCard({ number, title, blurb, href, status }: EpisodeCardProps) {
     </div>
   );
 
-  if (isLive && href) {
+  if (linkable) {
     return (
       <a href={href} className="block outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-tool)]">
         {inner}

@@ -14,6 +14,7 @@ inject("dist/index.html", entry.renderLanding());
 inject("dist/episodes/how-an-agent-works/index.html", entry.renderEpisode());
 inject("dist/episodes/where-agents-go-wrong/index.html", entry.renderEpisode15());
 inject("dist/episodes/how-ai-reads-the-web/index.html", entry.renderEpisode02());
+inject("dist/episodes/how-agents-remember/index.html", entry.renderEpisode03());
 
 rmSync("dist-ssr", { recursive: true, force: true });
 

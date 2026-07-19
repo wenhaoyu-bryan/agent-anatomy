@@ -218,3 +218,61 @@ The composed moment is S5 with the answer assembling:
    its source chip.
 3. Stop a beat after the last thread lands. ~14s, no editing. (Hover a citation at
    the end to show the highlight, if you want a second beat.)
+
+# Fourth launch — Episode 03 ("How agents remember") · season finale
+
+The season closer, and the angle is personal: *your AI doesn't remember you — here's
+what it actually does instead.* Lead the thread with the compaction clip (the crowded
+window collapsing into a small grey block), then land the season-finale note and the
+open invitation for episode 04. Clip-first.
+
+## X thread (4 posts)
+
+**Post 1 (with the compaction clip):**
+
+> "Does ChatGPT remember me?" Mostly no. When a session ends, the context window is
+> wiped — nothing is saved in the model.
+>
+> So how does an agent finish a long job? Watch it compress its own memory into a
+> smaller, lossier summary, in real time:
+>
+> https://wenhaoyu-bryan.github.io/agent-anatomy/episodes/how-agents-remember/
+
+**Post 2:**
+
+> The trick is a distinction people miss: context vs. memory.
+>
+> Context is what's in the window right now — finite, and wiped at the end.
+> Memory is what the agent writes to a *file*, outside the window, so it survives.
+> Notes, not neurons.
+
+**Post 3:**
+
+> The honest moment: play through the session break and the window empties
+> completely — every particle gone. The next day, in a blank window, the agent
+> reads its own notes back and picks up exactly where it left off.
+
+**Post 4:**
+
+> That's the season: how an agent works → where they go wrong → how they read the
+> web → how they remember. Four episodes, one replay engine, one JSON format that
+> only ever grew backward-compatibly.
+>
+> What should I open up next? → https://github.com/wenhaoyu-bryan/agent-anatomy/issues/new?template=episode-suggestion.md
+
+## Recording the compaction clip (the share moment)
+
+The composed moment is S3 — the pinned compaction scene — for a clean, deterministic
+recording:
+
+1. Open the Episode 03 page at 1440×900, hide the cursor, scroll to the "Compaction"
+   section until it pins.
+2. Scroll down slowly and evenly through the section. The window fills with colorful
+   research particles (the CTX readout climbing toward 2,225 / 2,400), holds full,
+   then the reads draw down, flare, and collapse into a single small, dim grey block
+   as the readout drops to 925.
+3. Stop a beat after the grey block settles. ~12s, no editing.
+
+For a second beat, the S5 replay's `session_break` (the window emptying while the
+memory file stays put in the panel) is the emotional counterpart — record it if you
+want a two-scene cut.

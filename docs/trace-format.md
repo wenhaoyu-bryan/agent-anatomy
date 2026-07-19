@@ -1,7 +1,7 @@
 # Trace format
 
-Current version: **1.2** (backward compatible — every 1.0 and 1.1 trace still
-validates and renders unchanged). See the [changelog](#changelog).
+Current version: **1.3** (backward compatible — every 1.0, 1.1, and 1.2 trace
+still validates and renders unchanged). See the [changelog](#changelog).
 
 A **trace** is a JSON file describing one complete, scripted agent run: what the
 agent was asked, what it thought, which tools it called, what came back, and how
@@ -16,13 +16,14 @@ session logs can be adapted into traces.
   [`src/trace/schema.ts`](../src/trace/schema.ts) via `pnpm schema:build`)
 - **Complete example:** [`traces/fix-broken-page.trace.json`](../traces/fix-broken-page.trace.json)
 - **Web-retrieval example (v1.2):** [`traces/reheat-rice.trace.json`](../traces/reheat-rice.trace.json)
+- **Memory example (v1.3):** [`traces/tokyo-trip.trace.json`](../traces/tokyo-trip.trace.json) — one task across two sessions
 - **Starter template:** [`traces/example-minimal.trace.json`](../traces/example-minimal.trace.json)
 
 ## Top level
 
 ```jsonc
 {
-  "version": "1.1",                   // "1.0" | "1.1"
+  "version": "1.3",                   // "1.0" | "1.1" | "1.2" | "1.3"
   "meta": {
     "id": "fix-broken-page",          // stable slug
     "title": "Fix the broken product page",
@@ -39,7 +40,7 @@ session logs can be adapted into traces.
 
 ## Events
 
-Nine event types. Every event has a unique `id` and a `tokens` estimate —
+Thirteen event types. Every event has a unique `id` and a `tokens` estimate —
 hand-tuned and plausible, not exact. The engine derives live context usage by
 folding over events. Any event may carry an optional `annotation` (v1.1) — a
 short authorial note the UI renders in the margin, used sparingly.
@@ -55,6 +56,10 @@ short authorial note the UI renders in the margin, used sparingly.
 | `context_evicted` | `evictedEventIds`, `tokens` | earlier items dropped from the window (v1.1) |
 | `search` | `query`, `results` | the agent searched the web (v1.2) |
 | `fetch` | `sourceId`, `url`, `status`, `extracted?` | the agent read (or failed to read) a page (v1.2) |
+| `compaction` | `replacesEventIds`, `summary`, `tokensBefore`, `tokens` | earlier items compressed into one smaller, lossy summary (v1.3) |
+| `session_break` | `label`, `tokens` (0) | a hard reset: the window is emptied; only files survive (v1.3) |
+| `memory_write` | `path`, `content` | a durable note written to a file (v1.3) |
+| `memory_read` | `path`, `content` | a file read back into the window (v1.3) |
 
 Every `tool` referenced by a `tool_call` / `tool_result` must be declared in
 `tools`. Event `id`s must be unique. Live context usage — `+tokens` per event,
@@ -166,6 +171,78 @@ Rules the validator enforces:
 `search`, `fetch`, `citations`, and the `sources` registry are 1.2 features and
 are rejected in a trace that still declares `version: "1.0"` or `"1.1"`.
 
+## Memory (v1.3)
+
+The window is finite and ephemeral: it holds what the agent knows *right now*, and
+it runs out. **Memory is what the agent deliberately writes down outside the window
+so it survives.** Version 1.3 models the whole arc — compressing context, saving
+notes to a file, ending a session, and picking the work back up in a fresh window.
+
+### `compaction` — smaller and blurrier
+
+When the window fills, old context can be compressed into a shorter summary. The
+compaction replaces the events it names with one digest item (this event itself):
+
+```jsonc
+{
+  "id": "e13",
+  "type": "compaction",
+  "replacesEventIds": ["e04", "e06", "e08"], // items compressed away
+  "summary": "Research digest: quiet temples in Yanaka …", // the surviving text
+  "tokensBefore": 1730,   // what the replaced items occupied (sum of their tokens)
+  "tokens": 430           // the AFTER size — the summary is a normal window item
+}
+```
+
+Rules the validator enforces:
+
+- Every id in `replacesEventIds` must be a live window item (not unknown, not
+  already gone).
+- `tokensBefore` must equal the summed `tokens` of the replaced items.
+- `tokens` (the summary's size) must be **less than** `tokensBefore` — a
+  compaction has to shrink. The window drops by `tokensBefore − tokens`.
+
+Compression is lossy on purpose: a good trace makes the summary visibly drop
+something real (the Tokyo trace keeps "some temples close early midweek" but
+loses the exact opening hours). Note there is no separate `tokensAfter` field —
+the summary is an ordinary window item, so its post-size is just its `tokens`,
+like every other event.
+
+### `session_break` — the window empties
+
+A hard reset. Everything in the window is gone; the running total returns to zero.
+The only thing that survives is the **artifact file layer** — memory notes are
+files, and files persist.
+
+```jsonc
+{ "id": "e16", "type": "session_break", "label": "The next day", "tokens": 0 }
+```
+
+`tokens` must be `0` — a break costs nothing; it only clears.
+
+### `memory_write` and `memory_read` — notes, not neurons
+
+The most reliable memory an agent has is a file it wrote. A `memory_write` records
+a note into the artifact's `files`; a later `memory_read` — even in a brand-new
+session after a `session_break` — pulls it back into the window.
+
+```jsonc
+{ "id": "e14", "type": "memory_write", "path": "notes/tokyo-trip.md", "content": "# Working notes …", "tokens": 260 }
+{ "id": "e19", "type": "memory_read",  "path": "notes/tokyo-trip.md", "content": "# Working notes …", "tokens": 260 }
+```
+
+Rules the validator enforces:
+
+- A `memory_read` must reference a `path` that an earlier `memory_write` (or the
+  `initialArtifact.files`) actually wrote.
+- Its `content` must be **byte-identical** to what is on that file — you read
+  back exactly the note you wrote, not a paraphrase. This is the episode's thesis,
+  encoded in the schema.
+
+`compaction`, `session_break`, `memory_write`, and `memory_read` are 1.3 features
+and are rejected in a trace that still declares `version` `"1.0"`, `"1.1"`, or
+`"1.2"`.
+
 ## The artifact — the visible world
 
 ```jsonc
@@ -189,6 +266,23 @@ timeline scrubbing instant. `renderId` selects which visual state the
 3. Validate: `pnpm trace:validate` (also runs in CI on every push).
 
 ## Changelog
+
+### 1.3
+
+- Added memory. A `compaction` event compresses earlier window items into one
+  smaller, lossy `summary` (the window drops by `tokensBefore − tokens`). A
+  `session_break` event empties the window entirely, leaving only the artifact
+  file layer. `memory_write` and `memory_read` events save a durable note to a
+  file and read it back — even across a session break — with the read content
+  validated byte-for-byte against what was written. The checked-in
+  [`traces/tokyo-trip.trace.json`](../traces/tokyo-trip.trace.json) is the first
+  consumer: one research task carried across two sessions.
+- The replay engine folds the new events (compaction nets `tokens − tokensBefore`;
+  a session break resets the running total to zero) and derives memory files onto
+  the artifact snapshot so a panel can show the note sitting outside the window.
+- Backward compatible: every 1.0, 1.1, and 1.2 trace validates and renders
+  unchanged, and the new features are rejected in a trace still declared 1.0,
+  1.1, or 1.2.
 
 ### 1.2
 

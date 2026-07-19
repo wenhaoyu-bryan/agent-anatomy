@@ -64,23 +64,51 @@ export function ContextMeter2D() {
         ))}
       </ul>
 
-      {frame.event &&
-        (frame.event.type === "context_evicted" ? (
-          <p className="mt-auto border-t border-[var(--color-hairline)] pt-3 font-mono text-xs text-[var(--color-muted)]">
-            <span style={{ color: EVENT_META.context_evicted.color }}>
-              {frame.event.evictedEventIds.length} item
-              {frame.event.evictedEventIds.length === 1 ? "" : "s"}
-            </span>{" "}
-            left the window · −{frame.event.tokens} tokens
-          </p>
-        ) : (
-          <p className="mt-auto border-t border-[var(--color-hairline)] pt-3 font-mono text-xs text-[var(--color-muted)]">
-            <span style={{ color: EVENT_META[frame.event.type].color }}>
-              {EVENT_META[frame.event.type].label}
-            </span>{" "}
-            entered the window · +{frame.event.tokens} tokens
-          </p>
-        ))}
+      {frame.event && (
+        <p className="mt-auto border-t border-[var(--color-hairline)] pt-3 font-mono text-xs text-[var(--color-muted)]">
+          <MeterFooter event={frame.event} />
+        </p>
+      )}
     </div>
+  );
+}
+
+/** One line describing what the current event did to the window. */
+export function MeterFooter({ event }: { event: import("../../trace/schema").TraceEvent }) {
+  if (event.type === "context_evicted") {
+    const n = event.evictedEventIds.length;
+    return (
+      <>
+        <span style={{ color: EVENT_META.context_evicted.color }}>
+          {n} item{n === 1 ? "" : "s"}
+        </span>{" "}
+        left the window · −{event.tokens} tokens
+      </>
+    );
+  }
+  if (event.type === "compaction") {
+    const n = event.replacesEventIds.length;
+    return (
+      <>
+        <span style={{ color: EVENT_META.compaction.color }}>
+          {n} item{n === 1 ? "" : "s"}
+        </span>{" "}
+        compressed into a summary · −{event.tokensBefore - event.tokens} tokens
+      </>
+    );
+  }
+  if (event.type === "session_break") {
+    return (
+      <>
+        <span style={{ color: EVENT_META.session_break.color }}>Session ended</span> — the window is
+        empty now
+      </>
+    );
+  }
+  return (
+    <>
+      <span style={{ color: EVENT_META[event.type].color }}>{EVENT_META[event.type].label}</span>{" "}
+      entered the window · +{event.tokens} tokens
+    </>
   );
 }

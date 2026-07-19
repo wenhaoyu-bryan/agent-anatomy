@@ -22,7 +22,15 @@ for (const file of files) {
     let running = 0;
     let peak = 0;
     for (const event of result.data.events) {
-      running += event.type === "context_evicted" ? -event.tokens : event.tokens;
+      if (event.type === "context_evicted") {
+        running -= event.tokens;
+      } else if (event.type === "compaction") {
+        running += event.tokens - event.tokensBefore;
+      } else if (event.type === "session_break") {
+        running = 0;
+      } else {
+        running += event.tokens;
+      }
       peak = Math.max(peak, running);
     }
     console.log(
