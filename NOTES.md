@@ -1038,3 +1038,60 @@ is W2). Demo = read the party trace as a screenplay.
 flat, globally ordered array; "parallel" lanes are a presentational projection —
 the engine folds in file order, nothing runs at the same literal instant, which is
 also roughly true of a real multi-agent system's merged log.
+
+### W2 — the lane replay rig (this milestone)
+
+New page `episodes/how-agents-work-together/` (`src/episode04/`), wired like Ep 02/03:
+`vite.config` input + `entry-server.renderEpisode04` + `prerender.ts` inject + a
+body-only CI grep ("its own small, fresh window"). Hero + the S5 **lane replay** +
+a minimal series-index close; the S2 recap, S3 fan-out scene, S4 handoffs figure,
+and full S6 come in W3/W4 (the U2/V2 pattern).
+
+**Shared rig, extended (backward compatible — all prior episodes unregressed).**
+The whole point of W0 was one shared rig; W2 keeps it, teaching the two shared
+components about lanes:
+- **`TranscriptPanel`** — dimming now keys off the union of ALL lanes'
+  `contextItems` (was just `frame.contextItems`), so a helper's events aren't
+  falsely dimmed, and venue's first-attempt events correctly dim after the
+  re-brief resets its window. A small per-lane **tick** badge marks helper work
+  (`→ VENUE` on a spawn, `VENUE →` on a result, `VENUE` on the helper's own
+  events); helper-internal events indent (`ml-4`) to read as a sub-lane. New
+  `EventText` for `agent_spawn` (the brief, cyan-ruled = the helper's whole
+  starting context) and `agent_result` (the summary, muted/italic = a lossy
+  digest). Prior traces have no `agents`, so no ticks/indents appear — verified
+  Ep 01 transcript renders 20 rows, 0 ticks.
+- **`Timeline`** — optional `markers?: {index,label}[]` prop renders small
+  clickable flags above the strip (seek on click), positioned by event fraction.
+  No prop = unchanged for every prior episode.
+
+**New Episode-04 components (`src/episode04/`):**
+- **`LaneMeters`** — the context panel is now a grid of windows (lead + 3
+  helpers) off `frame.lanes`. Each cell: name, a stacked bar (event-type colours,
+  per-lane width), `CTX used/window`, fill %. The lane the current event changed
+  (`frame.activeAgentId`) gets the one cyan accent (border + ring + faint panel
+  bg); helpers show "waiting for a brief…" until spawned. **No per-lane hue** —
+  lanes are told apart by name + grid position (the W0 lesson, not repeated).
+  Desktop 2×2; mobile a lane switcher that follows the active lane.
+- **`PlanPanel`** — the third panel; the artifact heals here (`party-plan.md`
+  appears when the lead composes it), MemoryPanel's file-card grammar.
+- **`LaneReplay`** — the S5 rig: shared `Controls`/`Timeline`(+markers)/
+  `LoopIndicator`/`TranscriptPanel`, 3-across `md:grid-cols-[1.15fr_0.85fr_1fr]`
+  (Transcript | Context windows | The plan), mobile tabs. Markers resolved by
+  event id: e16 "over budget" (the snag) + e21 "re-brief" (the adaptation).
+
+**Verified in-browser** (build → preview → Playwright, 0 console errors; 1 warning
+= three.js `THREE.Clock`, series-wide): mid-run (e15) the four windows read
+**Lead 210/2400 · VENUE 730/1400 · FOOD 630 · INVITES 230** filling in parallel;
+end reads **Lead 1090** (holds the summaries), **VENUE 440** (re-brief reset),
+`party-plan.md` composed. Active-lane highlight lands on VENUE at e07 (cyan border,
+after the 300ms transition). Both timeline markers present + clickable. Mobile
+390px: no overflow, replay tabs (Transcript/Windows/The plan) + lane switcher
+(Lead/VENUE/FOOD/INVITES), one panel at a time. Prerender ships hero + replay text
+and **no `<canvas>`** (the no-JS/reduced path). Ep 01 unregressed.
+
+§1 budget: ep04 chunk **7.8 KB gz**, per-page ≈ **364 KB gz** (global + three.js +
+demoStream + episode04 + HeroAmbient + lazy scroll) — under 450, the lightest
+WebGL page since it has no dedicated scene yet. **W3's fan-out canvas is the flagged
+budget risk** — measure it early. 83 tests green, 8 traces validate, all 6 CI
+sentinels pass, full build green (6 pages prerender). Demo = play the Episode 04
+replay end-to-end.
