@@ -63,7 +63,13 @@ export const sourceEntrySchema = z
     title: z.string().min(1),
     /** Display URL — invented, plausible; the trace never fetches live. */
     url: z.string().min(1),
-    /** 0–360 hue for the source chip, so each source reads distinct. */
+    /**
+     * DEPRECATED (kept for back-compat; no renderer reads it). Was a 0–360 hue
+     * for the source chip. Episode 02's UI now uses only the §6 telemetry
+     * palette — chips are neutral, threads are signal cyan. See
+     * docs/trace-format.md. Still required on a `sources` entry so prior traces
+     * validate unchanged.
+     */
     faviconHue: z.number().int().min(0).max(360),
   })
   .strict();

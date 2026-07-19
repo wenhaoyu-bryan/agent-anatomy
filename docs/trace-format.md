@@ -110,10 +110,19 @@ source by `sourceId`.
     "sourceId": "nfsa",                            // referenced everywhere else
     "title": "Reheating rice safely — Food Standards Agency",
     "url": "foodstandards.gov.example/rice-safety", // invented; nothing is fetched live
-    "faviconHue": 210                               // 0–360, gives the chip a stable colour
+    "faviconHue": 210                               // DEPRECATED — see note below
   }
 ]
 ```
+
+> **`faviconHue` is deprecated (no longer rendered).** It was a 0–360 hue that
+> tinted each source's chip and citation thread. Episode 02's UI dropped it in
+> favour of the series' fixed telemetry palette (§6): source chips are neutral,
+> told apart by their label and glyph, and citation threads render in signal
+> cyan only — the thread → source mapping is carried by hovering or focusing a
+> citation. The field is **kept in the schema for back-compat** (existing traces
+> still validate and it stays required on a `sources` entry), but no renderer
+> reads it. New traces may set any valid value; `210` is a fine default.
 
 ### `search` and `fetch`
 

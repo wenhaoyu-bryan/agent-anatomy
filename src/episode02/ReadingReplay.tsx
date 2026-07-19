@@ -17,11 +17,12 @@ const TABS: Array<{ id: TabId; label: string }> = [
 ];
 
 /**
- * S5 — the replay showpiece (Episode 02). Episode 01's three-panel rig,
- * extended: transcript | context window | sources + answer. User-driven
- * (buttons + scrubber + autoplay), never tied to scroll. Desktop shows all
- * three; mobile tabs between them with the timeline persistent. The context
- * panel is the 2D meter for now — the WebGL funnel lands in U3.
+ * S5 — the replay showpiece (Episode 02). Episode 01's shared three-panel rig,
+ * unchanged: transcript | context window | sources + answer, in the series'
+ * 3-across grid. User-driven (buttons + scrubber + autoplay), never tied to
+ * scroll. Desktop shows all three; mobile tabs between them with the timeline
+ * persistent. The context panel is the shared 2D meter — Episode 02's WebGL
+ * work is the S3 funnel, a separate scene.
  */
 export function ReadingReplay({ trace }: { trace: Trace }) {
   const [tab, setTab] = useState<TabId>("transcript");
@@ -85,19 +86,18 @@ export function ReadingReplay({ trace }: { trace: Trace }) {
             ))}
           </div>
 
-          {/* Transcript + context in a row; the sources+answer showpiece spans
-              full width below so citation threads have room to arc. On mobile
-              the tabs show one panel at a time. */}
-          <div className="mt-4 md:grid md:grid-cols-2 md:gap-4">
+          {/* Desktop: the series' shared 3-across grid — transcript | context |
+              sources + answer. Mobile: the tabs show one panel at a time. The
+              sources panel scrolls, so its citation threads arc up the column
+              from each cited span to the chip it came from. */}
+          <div className="mt-4 md:grid md:grid-cols-[1.15fr_0.85fr_1fr] md:gap-4">
             <Panel id="transcript" title="Transcript" activeTab={tab} scroll fixedHeight>
               <TranscriptPanel />
             </Panel>
-            <Panel id="context" title="Context window" activeTab={tab} fixedHeight>
+            <Panel id="context" title="Context window" activeTab={tab} scroll fixedHeight>
               <ContextMeter2D />
             </Panel>
-          </div>
-          <div className="mt-4">
-            <Panel id="sources" title="Sources & answer" activeTab={tab}>
+            <Panel id="sources" title="Sources & answer" activeTab={tab} scroll fixedHeight>
               <SourcesAnswerPanel />
             </Panel>
           </div>
