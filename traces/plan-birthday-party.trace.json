@@ -1,0 +1,249 @@
+{
+  "version": "1.4",
+  "meta": {
+    "id": "plan-birthday-party",
+    "title": "Plan a surprise 30th birthday party",
+    "description": "A lead agent splits a party into three briefs, hands each to a helper with its own small window, and composes their summaries — adapting when one comes back over budget and another spoils the surprise.",
+    "contextWindowTokens": 2400
+  },
+  "tools": [
+    { "name": "search_web", "description": "Search the web for pages relevant to a query." },
+    { "name": "fetch_page", "description": "Open a page and read its text." },
+    { "name": "write_file", "description": "Write a file to the shared workspace." }
+  ],
+  "agents": [
+    { "agentId": "venue", "name": "VENUE", "contextWindowTokens": 1400 },
+    { "agentId": "food", "name": "FOOD", "contextWindowTokens": 1400 },
+    { "agentId": "invites", "name": "INVITES", "contextWindowTokens": 1400 }
+  ],
+  "sources": [
+    { "sourceId": "sunset-loft", "title": "Sunset Loft — private rooftop room", "url": "sunsetloft.example/hire", "faviconHue": 210 },
+    { "sourceId": "garden-room", "title": "Garden Room — private dining at Fig & Vine", "url": "figandvine.example/private-room", "faviconHue": 210 },
+    { "sourceId": "grand-hall", "title": "The Grand Hall — banquet venue", "url": "grandhall.example", "faviconHue": 210 },
+    { "sourceId": "bangkok-house", "title": "Bangkok House Catering", "url": "bangkokhouse.example/parties", "faviconHue": 210 },
+    { "sourceId": "thai-orchid", "title": "Thai Orchid — dine-in restaurant", "url": "thaiorchid.example", "faviconHue": 210 },
+    { "sourceId": "spice-boat", "title": "Spice Boat — Thai meal kits", "url": "spiceboat.example", "faviconHue": 210 }
+  ],
+  "initialArtifact": {
+    "kind": "webpage",
+    "files": {},
+    "renderId": "no-plan"
+  },
+  "events": [
+    {
+      "id": "e01",
+      "type": "system_prompt",
+      "summary": "You are a coordinating agent. You can search the web, read pages, and write files — and you can hand a focused sub-task to a helper agent, each of which has its own small context window and reports back a short summary.",
+      "tokens": 60
+    },
+    {
+      "id": "e02",
+      "type": "user_message",
+      "text": "Plan a surprise 30th birthday for my sister, three weeks out. About 25 people. She loves Thai food and hates being the center of attention.",
+      "tokens": 60
+    },
+    {
+      "id": "e03",
+      "type": "thinking",
+      "text": "This is really three jobs — a venue, the food, and the invitations. If I research all of it in one window it fills up fast, and I start dropping the early details. I'll split it: one helper per job, each with a short brief and its own fresh window. All I need back is their conclusions.",
+      "tokens": 90
+    },
+    {
+      "id": "e04",
+      "type": "agent_spawn",
+      "spawnedAgentId": "venue",
+      "task": "Find a private venue for a surprise 30th birthday — about 25 guests, three weeks out. It has to feel low-key: she hates being the center of attention, so no big open restaurant floor. Report the best option with its capacity and cost.",
+      "tokens": 80
+    },
+    {
+      "id": "e05",
+      "type": "agent_spawn",
+      "spawnedAgentId": "food",
+      "task": "Find a caterer for a 30th birthday, about 25 people, three weeks out. She loves Thai food. Report one option with a per-person price.",
+      "tokens": 60
+    },
+    {
+      "id": "e06",
+      "type": "agent_spawn",
+      "spawnedAgentId": "invites",
+      "task": "Draft a short invitation for a surprise 30th birthday, about 25 guests, three weeks out. Keep the surprise: ask guests to arrive 30 minutes early and stay quiet. She hates being the center of attention, so keep the tone warm and low-key.",
+      "tokens": 80
+    },
+    {
+      "id": "e07",
+      "type": "thinking",
+      "agentId": "venue",
+      "text": "A private room or a small loft — not a table on a restaurant floor. Let me search for what's bookable.",
+      "tokens": 60
+    },
+    {
+      "id": "e08",
+      "type": "search",
+      "agentId": "venue",
+      "query": "private event room hire 25 guests",
+      "results": [
+        { "sourceId": "sunset-loft", "title": "Sunset Loft — private rooftop room", "url": "sunsetloft.example/hire", "snippet": "Private rooftop room, seats up to 30. Four-hour hire." },
+        { "sourceId": "garden-room", "title": "Garden Room — private dining at Fig & Vine", "url": "figandvine.example/private-room", "snippet": "Intimate back room for private parties, seats 26." },
+        { "sourceId": "grand-hall", "title": "The Grand Hall — banquet venue", "url": "grandhall.example", "snippet": "Our main ballroom seats 300 under the spotlights." }
+      ],
+      "tokens": 220
+    },
+    {
+      "id": "e09",
+      "type": "thinking",
+      "agentId": "food",
+      "text": "Thai food for 25. I want a caterer that can set up a buffet, not a sit-down table. Let me search.",
+      "tokens": 50
+    },
+    {
+      "id": "e10",
+      "type": "search",
+      "agentId": "food",
+      "query": "Thai catering buffet 25 people",
+      "results": [
+        { "sourceId": "bangkok-house", "title": "Bangkok House Catering", "url": "bangkokhouse.example/parties", "snippet": "Thai party buffets for groups. Per-head pricing." },
+        { "sourceId": "thai-orchid", "title": "Thai Orchid — dine-in restaurant", "url": "thaiorchid.example", "snippet": "Sit-down Thai restaurant, bookings for up to 12." },
+        { "sourceId": "spice-boat", "title": "Spice Boat — Thai meal kits", "url": "spiceboat.example", "snippet": "Thai meal kits delivered; you cook it yourself." }
+      ],
+      "tokens": 220
+    },
+    {
+      "id": "e11",
+      "type": "thinking",
+      "agentId": "invites",
+      "text": "It has to be warm, low-key, and protect the surprise. I'll ask guests to come early and keep it quiet.",
+      "tokens": 60
+    },
+    {
+      "id": "e12",
+      "type": "fetch",
+      "agentId": "venue",
+      "sourceId": "sunset-loft",
+      "url": "sunsetloft.example/hire",
+      "status": "ok",
+      "extracted": "Sunset Loft — private rooftop room, seats up to 30. Hire covers four hours. Minimum spend $2,400 on food and drink.",
+      "tokens": 300
+    },
+    {
+      "id": "e13",
+      "type": "fetch",
+      "agentId": "food",
+      "sourceId": "bangkok-house",
+      "url": "bangkokhouse.example/parties",
+      "status": "ok",
+      "extracted": "Bangkok House Catering — party buffet for groups, $28 per person, we set up and clear away. Optional birthday surprise: a gong and a table announcement to the whole room.",
+      "tokens": 300
+    },
+    {
+      "id": "e14",
+      "type": "thinking",
+      "agentId": "invites",
+      "text": "Draft: 'Surprise 30th for [name]! Please arrive by 6:30 — she arrives at 7. Keep it quiet, and come ready to celebrate.'",
+      "tokens": 90
+    },
+    {
+      "id": "e15",
+      "type": "thinking",
+      "agentId": "venue",
+      "text": "The loft fits and it's private, but a $2,400 minimum is a lot for 25 people once food is separate. I'll flag it — the budget is the lead's call, not mine.",
+      "tokens": 70
+    },
+    {
+      "id": "e16",
+      "type": "agent_result",
+      "agentId": "venue",
+      "summary": "Top option: Sunset Loft — a private rooftop room, seats up to 30, feels nicely low-key. Catch: it carries a $2,400 minimum food-and-drink spend, which is likely over budget once catering is counted separately. I haven't checked the second option yet.",
+      "tokens": 90
+    },
+    {
+      "id": "e17",
+      "type": "thinking",
+      "text": "I only see venue's summary, not its whole search — and it says the loft is over budget. I don't want the whole budget going to a room minimum. I'll re-brief venue: flat-fee rooms only, no minimum spend.",
+      "tokens": 90
+    },
+    {
+      "id": "e18",
+      "type": "agent_result",
+      "agentId": "food",
+      "summary": "Recommended: Bangkok House Catering — a Thai buffet at $28 a head (about $700 for 25). Bonus: they throw in a birthday surprise — a gong and an announcement to the whole room.",
+      "tokens": 90
+    },
+    {
+      "id": "e19",
+      "type": "thinking",
+      "text": "Good price on the food — but 'a gong and an announcement to the whole room' is exactly what she'd hate. Food didn't know that; I never put it in its brief. That's on me. I'll keep the caterer and just decline the announcement.",
+      "tokens": 100
+    },
+    {
+      "id": "e20",
+      "type": "agent_result",
+      "agentId": "invites",
+      "summary": "Draft invite: 'Surprise 30th for [name]! Please arrive by 6:30 — she gets there at 7. Keep it quiet: no big fuss, just the people she loves. Come celebrate.'",
+      "tokens": 80
+    },
+    {
+      "id": "e21",
+      "type": "agent_spawn",
+      "spawnedAgentId": "venue",
+      "task": "Revised brief: find a private room with a flat hire fee and no minimum spend — about 25 guests, low-key. Ignore anything with a minimum spend over $500.",
+      "tokens": 80
+    },
+    {
+      "id": "e22",
+      "type": "fetch",
+      "agentId": "venue",
+      "sourceId": "garden-room",
+      "url": "figandvine.example/private-room",
+      "status": "ok",
+      "extracted": "Garden Room at Fig & Vine — private back room, seats 26. Flat $300 room fee, no minimum spend. Outside catering welcome.",
+      "tokens": 300
+    },
+    {
+      "id": "e23",
+      "type": "thinking",
+      "agentId": "venue",
+      "text": "Flat $300, no minimum, fits 26, and we can bring our own caterer. That's the one.",
+      "tokens": 60
+    },
+    {
+      "id": "e24",
+      "type": "agent_result",
+      "agentId": "venue",
+      "summary": "Revised pick: the Garden Room — a private back room at a bistro. Seats 26, flat $300 fee, no minimum spend, and outside catering is allowed. Low-key and private.",
+      "tokens": 90
+    },
+    {
+      "id": "e25",
+      "type": "thinking",
+      "text": "Now I have all three: the Garden Room ($300, private), Bangkok House ($28 a head, no announcement), and a quiet invite. Venue and food land around $1,000 for 25. That fits. I'll write it up.",
+      "tokens": 110
+    },
+    {
+      "id": "e26",
+      "type": "tool_call",
+      "tool": "write_file",
+      "input": { "path": "party-plan.md" },
+      "tokens": 40
+    },
+    {
+      "id": "e27",
+      "type": "tool_result",
+      "tool": "write_file",
+      "output": "wrote party-plan.md",
+      "tokens": 30,
+      "artifact": {
+        "kind": "webpage",
+        "files": {
+          "party-plan.md": "# Surprise 30th — the plan\n\nGuest of honor: your sister · Guests: ~25 · When: 3 weeks out\n\n## Venue — Garden Room\nPrivate back room at Fig & Vine. Seats 26, flat $300 room fee, no minimum\nspend, outside catering allowed. Quiet and private — no restaurant floor,\nno spotlight.\n\n## Food — Bangkok House Catering\nThai buffet, $28 per person (~$700 for 25). We declined their birthday\ngong-and-announcement — she doesn't want to be the center of attention.\n\n## Invitations\n\"Surprise 30th for [name]! Please arrive by 6:30 (she arrives at 7). Keep\nit quiet — no big fuss, just the people she loves.\"\n\n## Rough budget\nVenue $300 + food ~$700 = ~$1,000, before cake and decorations.\n"
+        },
+        "renderId": "plan-ready"
+      }
+    },
+    {
+      "id": "e28",
+      "type": "assistant_message",
+      "text": "Here's the plan. Venue: the Garden Room — a private bistro back room that seats 26, a flat $300 fee, no minimum spend, and it lets us bring our own caterer. Food: Bangkok House, a Thai buffet at about $28 a head (~$700 for 25); I turned down their birthday announcement, since she'd hate being put on the spot. Invitations: a short, low-key note asking everyone to arrive by 6:30 and keep it quiet. Venue and food come to about $1,000. I've written it all up in party-plan.md.",
+      "tokens": 160
+    }
+  ]
+}

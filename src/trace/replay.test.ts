@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { createReplay } from "./replay";
+import { createReplay, LEAD_AGENT_ID } from "./replay";
 import type { ArtifactState, Trace } from "./schema";
 import tokyoTrip from "../../traces/tokyo-trip.trace.json";
+import birthdayParty from "../../traces/plan-birthday-party.trace.json";
 
 const worldBefore: ArtifactState = {
   kind: "webpage",
@@ -301,6 +302,101 @@ describe("createReplay — Tokyo two-session trace (v1.3 integration)", () => {
     expect(write && write.type === "memory_write" && write.content).toBe(
       read && read.type === "memory_read" ? read.content : null,
     );
+  });
+});
+
+describe("createReplay — single-agent traces have exactly one (lead) lane", () => {
+  it("exposes one lane whose contents mirror contextItems/tokensUsed", () => {
+    const replay = createReplay(trace);
+    for (let i = -1; i < replay.length; i++) {
+      const frame = replay.stateAt(i);
+      expect(frame.lanes).toHaveLength(1);
+      expect(frame.lanes[0]!.agentId).toBe(LEAD_AGENT_ID);
+      expect(frame.lanes[0]!.window).toBe(100);
+      expect(frame.lanes[0]!.contextItems).toBe(frame.contextItems);
+      expect(frame.lanes[0]!.tokensUsed).toBe(frame.tokensUsed);
+      expect(frame.activeAgentId).toBe(LEAD_AGENT_ID);
+    }
+  });
+});
+
+describe("createReplay — multi-agent delegation lanes (v1.4)", () => {
+  const party = birthdayParty as unknown as Trace;
+  const idx = (id: string) => party.events.findIndex((event) => event.id === id);
+  const lane = (frameIndex: number, agentId: string) => {
+    const found = createReplay(party).stateAt(frameIndex).lanes.find((l) => l.agentId === agentId);
+    if (!found) throw new Error(`no lane ${agentId}`);
+    return found;
+  };
+
+  it("starts with a stable set of empty lanes: lead + three helpers", () => {
+    const start = createReplay(party).stateAt(-1);
+    expect(start.lanes.map((l) => l.agentId)).toEqual(["lead", "venue", "food", "invites"]);
+    expect(start.lanes.every((l) => l.tokensUsed === 0 && l.contextItems.length === 0)).toBe(true);
+    expect(start.lanes.map((l) => l.window)).toEqual([2400, 1400, 1400, 1400]);
+  });
+
+  it("a spawn seeds ONLY the helper's window with just the brief — the lead is not charged", () => {
+    const spawnVenue = idx("e04");
+    // Lead stays at its pre-spawn total (system + user + split-thinking = 210).
+    expect(lane(spawnVenue, "lead").tokensUsed).toBe(210);
+    // Venue's fresh window holds exactly the brief.
+    const venue = lane(spawnVenue, "venue");
+    expect(venue.tokensUsed).toBe(80);
+    expect(venue.contextItems.map((e) => e.id)).toEqual(["e04"]);
+    expect(lane(spawnVenue, "venue")).toBeTruthy();
+    // Food/invites not spawned yet at this frame.
+    expect(lane(spawnVenue, "food").contextItems).toEqual([]);
+  });
+
+  it("the lead's window never holds a helper's working events — only its results", () => {
+    const end = createReplay(party).stateAt(party.events.length - 1);
+    const leadIds = end.contextItems.map((e) => e.id);
+    // No helper search/fetch/thinking leaked into the lead.
+    expect(leadIds).not.toContain("e08"); // venue search
+    expect(leadIds).not.toContain("e13"); // food fetch
+    // But every helper's report did arrive.
+    for (const resultId of ["e16", "e18", "e20", "e24"]) {
+      expect(leadIds).toContain(resultId);
+    }
+    expect(end.lanes.find((l) => l.agentId === "lead")!.tokensUsed).toBe(1090);
+  });
+
+  it("a result lands in the lead's window, not the reporting helper's", () => {
+    const venueResult = idx("e16");
+    // The lead grows by the digest (venue's result is 90; lead was 210 → 300).
+    expect(lane(venueResult, "lead").tokensUsed).toBe(300);
+    expect(lane(venueResult, "lead").contextItems.map((e) => e.id)).toContain("e16");
+    // Venue's own window is unchanged by reporting out — it still holds its work.
+    expect(lane(venueResult, "venue").contextItems.map((e) => e.id)).not.toContain("e16");
+    // The active lane for a result is the lead (it received the digest).
+    expect(createReplay(party).stateAt(venueResult).activeAgentId).toBe("lead");
+  });
+
+  it("re-spawning venue resets its window to the fresh brief — the first attempt is gone", () => {
+    const respawn = idx("e21");
+    const venue = lane(respawn, "venue");
+    expect(venue.contextItems.map((e) => e.id)).toEqual(["e21"]);
+    expect(venue.tokensUsed).toBe(80);
+    // The earlier over-budget search (e08/e12) is no longer in venue's window.
+    const before = lane(idx("e15"), "venue");
+    expect(before.contextItems.map((e) => e.id)).toContain("e12");
+  });
+
+  it("marks the acting lane on each event (spawn → helper, helper work → helper)", () => {
+    expect(createReplay(party).stateAt(idx("e04")).activeAgentId).toBe("venue");
+    expect(createReplay(party).stateAt(idx("e07")).activeAgentId).toBe("venue");
+    expect(createReplay(party).stateAt(idx("e10")).activeAgentId).toBe("food");
+    expect(createReplay(party).stateAt(idx("e28")).activeAgentId).toBe("lead");
+  });
+
+  it("no helper lane ever exceeds its own small window", () => {
+    const replay = createReplay(party);
+    for (let i = 0; i < replay.length; i++) {
+      for (const l of replay.stateAt(i).lanes) {
+        expect(l.tokensUsed).toBeLessThanOrEqual(l.window);
+      }
+    }
   });
 });
 

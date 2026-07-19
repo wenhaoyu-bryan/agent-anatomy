@@ -18,6 +18,8 @@ export const EVENT_META: Record<TraceEvent["type"], { label: string; color: stri
   session_break: { label: "SESSION", color: "var(--color-muted)" },
   memory_write: { label: "WRITE", color: "var(--color-tool)" },
   memory_read: { label: "READ", color: "var(--color-tool)" },
+  agent_spawn: { label: "SPAWN", color: "var(--color-tool)" },
+  agent_result: { label: "REPORT", color: "var(--color-muted)" },
 };
 
 export function eventBody(event: TraceEvent): string {
@@ -52,6 +54,10 @@ export function eventBody(event: TraceEvent): string {
       return `Saved a durable note to ${event.path}.`;
     case "memory_read":
       return `Read ${event.path} back into the window.`;
+    case "agent_spawn":
+      return event.task;
+    case "agent_result":
+      return event.summary;
   }
 }
 

@@ -1,7 +1,7 @@
 # Trace format
 
-Current version: **1.3** (backward compatible — every 1.0, 1.1, and 1.2 trace
-still validates and renders unchanged). See the [changelog](#changelog).
+Current version: **1.4** (backward compatible — every 1.0, 1.1, 1.2, and 1.3
+trace still validates and renders unchanged). See the [changelog](#changelog).
 
 A **trace** is a JSON file describing one complete, scripted agent run: what the
 agent was asked, what it thought, which tools it called, what came back, and how
@@ -17,22 +17,24 @@ session logs can be adapted into traces.
 - **Complete example:** [`traces/fix-broken-page.trace.json`](../traces/fix-broken-page.trace.json)
 - **Web-retrieval example (v1.2):** [`traces/reheat-rice.trace.json`](../traces/reheat-rice.trace.json)
 - **Memory example (v1.3):** [`traces/tokyo-trip.trace.json`](../traces/tokyo-trip.trace.json) — one task across two sessions
+- **Multi-agent example (v1.4):** [`traces/plan-birthday-party.trace.json`](../traces/plan-birthday-party.trace.json) — a lead delegating to three helpers
 - **Starter template:** [`traces/example-minimal.trace.json`](../traces/example-minimal.trace.json)
 
 ## Top level
 
 ```jsonc
 {
-  "version": "1.3",                   // "1.0" | "1.1" | "1.2" | "1.3"
+  "version": "1.3",                   // "1.0" | "1.1" | "1.2" | "1.3" | "1.4"
   "meta": {
     "id": "fix-broken-page",          // stable slug
     "title": "Fix the broken product page",
     "description": "One or two sentences.",
-    "contextWindowTokens": 4096       // budget shown by the token meter
+    "contextWindowTokens": 4096       // the LEAD's window; the token meter's budget
   },
   "tools": [                          // rendered in the toolbox panel
     { "name": "read_file", "description": "Open a file and see exactly what's inside." }
   ],
+  "agents": [ /* helper agents the lead can delegate to (v1.4, optional) */ ],
   "initialArtifact": { /* the world before the run — see below */ },
   "events": [ /* the run itself, in order */ ]
 }
@@ -40,10 +42,12 @@ session logs can be adapted into traces.
 
 ## Events
 
-Thirteen event types. Every event has a unique `id` and a `tokens` estimate —
+Fifteen event types. Every event has a unique `id` and a `tokens` estimate —
 hand-tuned and plausible, not exact. The engine derives live context usage by
 folding over events. Any event may carry an optional `annotation` (v1.1) — a
-short authorial note the UI renders in the margin, used sparingly.
+short authorial note the UI renders in the margin, used sparingly — and an
+optional `agentId` (v1.4) naming which agent's window it belongs to (default
+`"lead"`).
 
 | type | payload | meaning |
 |---|---|---|
@@ -60,11 +64,13 @@ short authorial note the UI renders in the margin, used sparingly.
 | `session_break` | `label`, `tokens` (0) | a hard reset: the window is emptied; only files survive (v1.3) |
 | `memory_write` | `path`, `content` | a durable note written to a file (v1.3) |
 | `memory_read` | `path`, `content` | a file read back into the window (v1.3) |
+| `agent_spawn` | `spawnedAgentId`, `task` | the lead hands a helper a brief; the helper's window resets to just that brief (v1.4) |
+| `agent_result` | `agentId`, `summary` | a helper reports one condensed digest, which enters the lead's window (v1.4) |
 
 Every `tool` referenced by a `tool_call` / `tool_result` must be declared in
 `tools`. Event `id`s must be unique. Live context usage — `+tokens` per event,
-`−tokens` per eviction — must stay within `meta.contextWindowTokens` at every
-step.
+`−tokens` per eviction — must stay within each agent's window at every step (for
+a single-agent trace that is just `meta.contextWindowTokens`, the lead's window).
 
 ## Context eviction (v1.1)
 
@@ -252,6 +258,88 @@ Rules the validator enforces:
 and are rejected in a trace that still declares `version` `"1.0"`, `"1.1"`, or
 `"1.2"`.
 
+## Multi-agent delegation (v1.4)
+
+When one task is really several, an agent can split it up: the **lead** hands
+each piece to a **helper agent** with its own small, fresh context window, lets
+the helpers work, and composes their reports. The lead never sees a helper's
+working context — only the summary it hands back. Version 1.4 models this with an
+`agents` registry, an `agentId` on any event, and two event types.
+
+### The `agents` registry
+
+An optional top-level array declaring each helper once, with its own window. The
+**lead is implicit** (`agentId: "lead"`, window `meta.contextWindowTokens`) and
+must not be declared here.
+
+```jsonc
+"agents": [
+  { "agentId": "venue", "name": "VENUE", "contextWindowTokens": 1400 },
+  { "agentId": "food",  "name": "FOOD",  "contextWindowTokens": 1400 }
+]
+```
+
+### `agentId` on an event
+
+Any event may set `agentId` to say whose window it belongs to (default `"lead"`).
+A helper's own thinking, searches, and fetches carry its id — and land in *its*
+window, not the lead's. A non-lead `agentId` must be declared in `agents` and
+already spawned.
+
+### `agent_spawn` and `agent_result`
+
+```jsonc
+{
+  "id": "e04",
+  "type": "agent_spawn",              // emitted by the lead
+  "spawnedAgentId": "venue",          // the helper being started
+  "task": "Find a private venue for ~25 guests …", // becomes its first context item
+  "tokens": 80                        // this brief's cost — to the HELPER, not the lead
+}
+{
+  "id": "e16",
+  "type": "agent_result",
+  "agentId": "venue",                 // the helper reporting
+  "summary": "Top option: Sunset Loft … but it has a $2,400 minimum spend.",
+  "tokens": 90                        // the digest's cost — enters the LEAD's window
+}
+```
+
+The token routing is the whole point:
+
+- **A spawn seeds the helper, not the lead.** `agent_spawn.tokens` land in the
+  spawned helper's window (its first and only item), and the spawn **resets** that
+  helper's window — a fresh context each time. The lead is *not* charged; that's
+  how delegation keeps the lead light.
+- **A result lands in the lead, not the helper.** `agent_result.tokens` land in
+  the lead's window as one condensed item. The lead never receives the helper's
+  full work — only this digest, which is lossy on purpose (the same idea as a
+  `compaction`).
+
+Rules the validator enforces:
+
+- Every referenced agent id (`agentId`, `spawnedAgentId`) must be declared in
+  `agents`, and registry ids must be unique; `"lead"` can't be declared.
+- Only the lead spawns (`agent_spawn.agentId` is `"lead"` or omitted), and a
+  helper can neither act nor report a result before it has been spawned.
+- Each agent's window is folded **independently**, and each must stay within its
+  own `contextWindowTokens` at every step. A helper's small window overflowing is
+  a validation error — which is exactly what would push the lead to re-brief.
+
+### The concurrency model — honest about "parallel"
+
+The events are **one flat, globally ordered array**. "Parallel" lanes are a
+*presentational projection* of that single timeline: the engine derives each
+agent's window independently and returns per-lane state, but the order in which
+events are folded is the order they appear in the file. Nothing runs at literally
+the same instant — the trace interleaves the lanes, the way a real multi-agent
+system's combined log interleaves the threads it merged. The replay renders that
+interleaving as side-by-side windows filling; the underlying model is, and stays,
+a single ordered sequence.
+
+`agents`, `agent_spawn`, `agent_result`, and an `agentId` on any event are 1.4
+features and are rejected in a trace that still declares an earlier version.
+
 ## The artifact — the visible world
 
 ```jsonc
@@ -275,6 +363,25 @@ timeline scrubbing instant. `renderId` selects which visual state the
 3. Validate: `pnpm trace:validate` (also runs in CI on every push).
 
 ## Changelog
+
+### 1.4
+
+- Added multi-agent delegation. An optional top-level `agents` registry declares
+  helper agents, each with its own `contextWindowTokens`; any event may carry an
+  `agentId` (default `"lead"`); and two event types model the handoffs — an
+  `agent_spawn` (the lead hands a helper a brief, which becomes that helper's
+  first context item and resets its window) and an `agent_result` (the helper
+  reports one condensed summary, which enters the lead's window). The checked-in
+  [`traces/plan-birthday-party.trace.json`](../traces/plan-birthday-party.trace.json)
+  is the first consumer: a lead splitting a party into three helper lanes.
+- The replay engine now derives **each agent's window independently** and returns
+  per-lane state (`frame.lanes`, plus `frame.activeAgentId`); `contextItems` and
+  `tokensUsed` continue to mean the lead's window, so every prior episode is
+  unchanged. A spawn seeds the helper's window (not the lead's); a result lands in
+  the lead's window (not the helper's). The events stay one flat, globally ordered
+  array — "parallel" is a presentational projection, documented above.
+- Backward compatible: every 1.0–1.3 trace validates and renders unchanged, and
+  the new features are rejected in a trace still declared 1.0, 1.1, 1.2, or 1.3.
 
 ### 1.3
 

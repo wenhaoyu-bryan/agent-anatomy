@@ -964,4 +964,77 @@ untouched (the whole corpus still validates and plays).
   inconsistency — a rule a viewer learns once: teaching marquees advance with
   scroll; the transport-driven replay never ties to scroll.
 
-Budgets re-measured on 01 / 1.5 / 02 after the edits — see the verify note below.
+Verified (build → preview → Playwright): 63 tests green, 7 traces validate,
+schema diff clean, build prerenders all 5 pages. Ep 02 replay played to the end —
+grid `429:317:373px` (the 1.15:0.85:1 ratio), 3 citation threads all cyan
+`#5CCFE6`, chips cyan-when-read / muted otherwise (zero per-source hues), 0
+console errors; mobile 390px no overflow, 3 tabs one-at-a-time. Ep 1.5 H1 is the
+new question; `<title>`/`og:title` unchanged. Budgets ~370–375 KB gz on 01/1.5/02
+(only the ep02/ep15 entry chunks changed, both smaller). Committed on
+`feature/episode-04` (3 commits). Demo shown.
+
+### W1 — schema 1.4 + the party trace (this milestone)
+
+Schema bumped to **1.4**, backward compatible (1.0–1.3 all validate/render
+unchanged; a dedicated test re-validates all seven prior traces and asserts their
+versions are untouched). This is the format's biggest structural test — parallel
+lanes — so the fold is now per-agent while staying identical for single-agent
+traces.
+
+Additions, all optional:
+- **top-level `agents` registry** `{ agentId, name, contextWindowTokens }[]` — each
+  helper has its own small window. The lead is implicit (`agentId: "lead"`, window
+  = `meta.contextWindowTokens`) and may NOT be declared.
+- **`agentId?` on every event** (added to `eventBase`) — whose window it belongs
+  to, default `"lead"`.
+- **`agent_spawn`** `{ spawnedAgentId, task }` and **`agent_result`** `{ summary }`.
+
+**Token routing (the crux).** `windowOwner` ≠ the acting agent for the two new
+types: a **spawn seeds the HELPER's window and resets it** (fresh brief, so a
+re-brief clears the first attempt), and is NOT charged to the lead — that's how
+delegation keeps the lead light. A **result lands in the LEAD's window** as one
+condensed item (Ep 03's lossy-digest grammar), not the reporting helper's. Every
+other event lands in its own agent's window.
+
+**Schema fold (superRefine) is now per-lane.** One `{ window, running, live }`
+lane per agent; eviction/compaction/session_break operate on the owner lane;
+`0 ≤ running ≤ window` is checked per lane. For a trace with no `agents` this is
+exactly the old single-lead fold (why all 63 prior tests passed untouched). New
+integrity rules: referenced agent ids must be declared + unique; `"lead"` can't be
+declared; only the lead spawns; a helper can't act/report before it's spawned;
+can't spawn the lead; a helper window overflow is an error.
+
+**Engine** (`replay.ts`): per-lane derivation, `frame.lanes: LaneState[]` (lead +
+helpers, stable set, helpers empty until spawned) + `frame.activeAgentId` (the
+lane whose window changed — spawn→helper, result→lead). `contextItems`/`tokensUsed`
+still = the LEAD lane, so shared components are unchanged. World state (artifact
+files, source registry) stays global across agents. `LEAD_AGENT_ID` exported.
+Exhaustive `event.type` sites updated (as every bump): `eventMeta.ts` (SPAWN cyan /
+REPORT muted + `eventBody`), `palette.ts` (agent_spawn→tool cyan, agent_result→
+system grey = the lossy-digest colour).
+
+**`validate-traces.ts`** now reads per-lane peaks straight off the engine frames
+(no re-implemented fold), reporting the lead peak + the tightest helper lane.
+
+**The trace** (`traces/plan-birthday-party.trace.json`, 28 events, v1.4, lead
+window 2400, 3 helpers × 1400): "Plan a surprise 30th birthday." Lead splits into
+VENUE / FOOD / INVITES briefs (the "center of attention" detail deliberately
+withheld from FOOD — the plant), three lanes fill in interleaved parallel, VENUE's
+first pick is over budget (the snag → lead re-briefs it, fresh window), FOOD's
+result surfaces a surprise-spoiling gong-announcement *because* its brief lacked
+the detail (lead catches it against the original ask), revised VENUE lands, lead
+composes `party-plan.md` (artifact heals) + a final answer with NO citations (the
+lead composes from summaries, never the helpers' sources — thematically honest).
+Lanes: lead peak **1090/2400**, VENUE **730/1400**, FOOD 630, INVITES 230 — three
+small healthy windows where one would have drowned. Engine + validator agree on
+every number.
+
+Tests: **83 green** (was 63; +12 schema for 1.4 rules + backward-compat, +8 engine
+for lane derivation). 8 traces validate. `schema:build` regenerated + idempotent
+(CI git-diff will pass). Full build green (5 pages prerender — the Episode 04 page
+is W2). Demo = read the party trace as a screenplay.
+
+**Concurrency model, documented honestly** (docs/trace-format.md): events are one
+flat, globally ordered array; "parallel" lanes are a presentational projection —
+the engine folds in file order, nothing runs at the same literal instant, which is
+also roughly true of a real multi-agent system's merged log.
