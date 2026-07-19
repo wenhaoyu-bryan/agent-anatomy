@@ -267,6 +267,32 @@ close motif.
   eyebrow, landing cards ordered 01 / 1.5 / 02 / 03 all "Live" plus a "04 · suggest
   a topic" card.
 
+### Update — resolved in Episode 04 W0 (2026-07-19)
+
+Before Episode 04 grew the series, a consistency pass (W0) folded in the
+[Med]/[Low-Med] findings so the rig is uniform before it scales. The findings
+above are left as the historical record; their resolutions:
+
+- **A1 (fixed).** Episode 02's per-source `faviconHue` colouring is gone. Source
+  chips are neutral panel chips told apart by label + a document glyph; citation
+  threads render in signal cyan (`--color-tool`) only; the thread → source
+  mapping is carried by the hover/focus highlight. `faviconHue` stays in the
+  schema for back-compat but is deprecated and no longer rendered.
+- **A2 (fixed).** Episode 02's replay is back on the shared 3-across grid
+  (`md:grid-cols-[1.15fr_0.85fr_1fr]`, transcript | context | sources+answer).
+  Mobile tabs unchanged.
+- **A3 (fixed).** Episode 1.5's on-page hero H1 is now a second-person question,
+  "What happens when the loop goes wrong?", matching 01/02/03. The page
+  `<title>` and OG title stay "Where agents go wrong" so already-shared URLs keep
+  their link previews.
+- **A4 (documented as intentional, not changed).** The series' interaction rule,
+  stated once: **concept scenes are scroll-scrubbed; replays are player-driven.**
+  A teaching scene (the pinned S3-style marquee) advances with the reader's
+  scroll; a replay (the S4/S5 showpiece) is driven by its transport controls and
+  is never tied to scroll — deliberate, per PLAN.md's mobile decision (a
+  scroll-scrubbed stepper frustrates on mobile and breaks the share clip). A5 is
+  already resolved; A6 is cosmetic and left as-is.
+
 ---
 
 ## 4. Technical debt & known gaps

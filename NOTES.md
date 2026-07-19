@@ -918,3 +918,50 @@ motif) but 1.5's is static. Verdict: **not intentional** — the brief asks for 
 was never retrofitted. Fix: added `<HeroAmbient />` under the existing vignette (mood
 preserved). Verified live: hero canvas mounts (2100×1431), 0 console errors, budget
 still 407 KB.
+
+## Episode 04 — "How Agents Work Together" (full episode; brief in the session prompt)
+
+Milestones W0–W4. Feature branch `feature/episode-04` (off `docs/project-overview`,
+so W0 can edit PROJECT-OVERVIEW.md). Split the job: one lead agent breaks a too-big
+task into pieces, hands each to a helper with its own small fresh window, and
+composes their summaries. Schema 1.4 adds parallel lanes.
+
+### W0 — consistency fixes from PROJECT-OVERVIEW.md (this milestone)
+
+Folds the audit findings in *before* the series grows, so Episode 04 doesn't
+compound them. Kept as separate concerns; prior-episode behaviour otherwise
+untouched (the whole corpus still validates and plays).
+
+- **A1 — Ep 02 palette breach fixed.** Removed per-source `faviconHue` colouring
+  from `SourcesAnswerPanel.tsx`. Source chips are now neutral panel chips with a
+  small document glyph (cyan when read, muted otherwise), told apart by their
+  label/url; the read/unread state carries in the border + `read`/`✕ unread`/
+  `found` micro-label, not a hue. Citation threads (underlay + drawn stroke) are
+  `var(--color-tool)` signal cyan only; the cited-span hover highlight is a cyan
+  underline. Hover/focus a citation still isolates its thread group (the thread →
+  source mapping). No `boxShadow` glow on chips (was `0 0 6px hue`) — §6 keeps
+  bloom in WebGL only. Result: the whole series is inside the fixed §6 palette.
+  `faviconHue` deprecated in `schema.ts` + `docs/trace-format.md`, kept required
+  for back-compat (no renderer reads it); traces + `trace.schema.json` unchanged.
+- **A2 — Ep 02 layout fixed.** `ReadingReplay.tsx` is back on the shared 3-across
+  grid `md:grid-cols-[1.15fr_0.85fr_1fr]` (transcript | context | sources+answer),
+  dropping the 2-over-1 split. The sources panel is now a fixed-height scrolling
+  column like the others; the panel's internal layout stacks sources-over-answer
+  (was `md:flex-row-reverse`), so citation threads arc *up* the column from each
+  cited span to its chip. Threads are measured relative to the panel container,
+  which scrolls with its content, so the arcs stay aligned when the column
+  scrolls. Mobile tabs unchanged.
+- **A3 — Ep 1.5 hero voice fixed.** On-page H1 `Episode15.tsx`: "Where agents go
+  wrong" → "What happens when the loop goes wrong?" (matches the 01/02/03
+  interrogative hero voice). The subline ("Episode 01 showed the loop working. It
+  doesn't always.") still reads. Page `<title>` + `og:title` in
+  `episodes/where-agents-go-wrong/index.html` left as "Where agents go wrong" so
+  already-shared URLs keep their previews. CI body-grep sentinel is "Two ideas
+  carry this episode" (unaffected).
+- **A4 — documented, not changed.** Series interaction rule stated in NOTES +
+  PROJECT-OVERVIEW: **concept scenes are scroll-scrubbed; replays are
+  player-driven** (deliberate, per PLAN's mobile decision). Not an
+  inconsistency — a rule a viewer learns once: teaching marquees advance with
+  scroll; the transport-driven replay never ties to scroll.
+
+Budgets re-measured on 01 / 1.5 / 02 after the edits — see the verify note below.
