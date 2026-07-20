@@ -90,7 +90,7 @@ function Hero() {
           className="mt-4 max-w-3xl text-4xl leading-[1.03] font-medium tracking-tight text-balance md:text-7xl"
           style={{ fontFamily: "var(--font-display)" }}
         >
-          Where agents go wrong
+          What happens when the loop goes wrong?
         </h1>
         <p className="mt-6 max-w-xl text-lg text-[var(--color-muted)] md:text-xl">
           Episode 01 showed the loop working. It doesn&rsquo;t always.

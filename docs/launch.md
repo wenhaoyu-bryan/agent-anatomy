@@ -276,3 +276,108 @@ recording:
 For a second beat, the S5 replay's `session_break` (the window emptying while the
 memory file stays put in the panel) is the emotional counterpart — record it if you
 want a two-scene cut.
+
+# Fifth launch — Episode 04 ("How agents work together")
+
+The angle: *watch an AI split itself into a team.* Season one showed one agent, one
+window. This one is the reveal that "agent" can mean a lead handing pieces to helpers
+that each get a window of their own. Lead the thread with the fan-out clip — one window
+splitting into three that fill at once is the whole hook. Clip-first.
+
+## X thread (4 posts)
+
+**Post 1 (with the fan-out clip):**
+
+> When people say "multi-agent," this is the thing they're pointing at — and it's
+> simpler than it sounds.
+>
+> One agent's window can only hold so much. So it splits the job: three helpers, three
+> fresh windows, filling in parallel. Watch one task fan out into three:
+>
+> https://wenhaoyu-bryan.github.io/agent-anatomy/episodes/how-agents-work-together/
+
+**Post 2:**
+
+> The example is a good one because it can go wrong: plan a surprise 30th birthday
+> party.
+>
+> The venue scout comes back over budget. The lead re-briefs it. And one helper almost
+> emails a spoiler to the guest of honour — caught just in time. Delegation isn't free.
+
+**Post 3:**
+
+> The idea that makes it work: a handoff is a summary.
+>
+> The lead never sees a helper's searches and dead ends — only the one sentence it
+> hands back. That keeps the lead light enough to run the whole show. Same trade as
+> compressing a memory: you keep the gist, lose the detail.
+
+**Post 4:**
+
+> That's season one: how an agent works → where they go wrong → how they read the web →
+> how they remember → how they work together. Five episodes, one replay engine, one JSON
+> format that only ever grew backward-compatibly.
+>
+> The `1.4` schema adds parallel agent lanes; every earlier trace still plays. What
+> should I open up next? → https://github.com/wenhaoyu-bryan/agent-anatomy/issues/new?template=episode-suggestion.md
+
+## LinkedIn post (the "what is multi-agent, really?" audience)
+
+> "Multi-agent systems" is having a moment, and most explanations are architecture
+> diagrams with a lot of boxes.
+>
+> Here's the version you can just watch: an AI planning a surprise birthday party by
+> splitting the work across a small team — a venue scout, a caterer, an invites writer
+> — each working in its own window, in parallel.
+>
+> Three things worth noticing, and you can see each one:
+>
+> 1. **Why split at all?** One context window is finite. Three jobs in one window pile
+>    up until the earliest details fall out the bottom. Three windows stay light.
+> 2. **A handoff is a summary.** The lead never holds a helper's full research — just
+>    the sentence it reports back. That's what keeps a coordinator from drowning.
+> 3. **It can go wrong.** A helper comes back over budget; another nearly sends a
+>    spoiler to the guest of honour. Coordination is a cost, not a free win.
+>
+> No new framework, no jargon — just the mechanism.
+>
+> Watch it (90 seconds): https://wenhaoyu-bryan.github.io/agent-anatomy/episodes/how-agents-work-together/
+
+## Show HN (optional season-one wrap)
+
+**Title:**
+
+> Show HN: Agent Anatomy — five interactive explainers of how AI agents work, one replay engine
+
+**First comment:**
+
+> Hi HN — over a few weekends I built a small series that explains how AI agents work
+> for people with no AI background, one mechanism per episode: the agent loop, how they
+> fail, how they read the web, how they remember, and now how they delegate to each
+> other.
+>
+> The through-line is the engineering: all five replays are JSON "trace" files played
+> by one headless, unit-tested engine. The format grew from 1.0 to 1.4 — adding
+> eviction, retrieval + citations, memory, and now parallel agent lanes — and stayed
+> backward compatible the whole way, so the first trace still plays on the latest
+> engine. Episode 04's schema (1.4) adds a registry of agents and a per-event owner, so
+> one flat, globally ordered event array can describe a lead and its parallel helpers,
+> each lane's tokens checked against its own window.
+>
+> Everything degrades without WebGL, the essays are prerendered for view-source, and
+> reduced-motion gets static variants. Build log is NOTES.md.
+
+## Recording the fan-out clip (the share moment)
+
+The composed moment is S3 — the pinned fan-out scene — deterministic and scroll-driven:
+
+1. Open the Episode 04 page at 1440×900, hide the cursor, scroll to the "Watch one task
+   fan out into three" section until it pins.
+2. Scroll down slowly and evenly. Three briefs cluster and pulse at the lead, then arc
+   out to three helper windows on the right, which scale up and fill from the bottom —
+   each flaring as its share of the work arrives ("1 → 3 windows" in the readout).
+3. Stop a beat after all three lanes settle. ~12s, no editing.
+
+For a second beat, the S5 lane replay's re-brief (the venue lane resetting after the
+"over budget" marker, then refilling on the revised brief) is the counterpart — record
+it if you want a two-scene cut showing the team adapting.

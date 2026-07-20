@@ -918,3 +918,321 @@ motif) but 1.5's is static. Verdict: **not intentional** — the brief asks for 
 was never retrofitted. Fix: added `<HeroAmbient />` under the existing vignette (mood
 preserved). Verified live: hero canvas mounts (2100×1431), 0 console errors, budget
 still 407 KB.
+
+## Episode 04 — "How Agents Work Together" (full episode; brief in the session prompt)
+
+Milestones W0–W4. Feature branch `feature/episode-04` (off `docs/project-overview`,
+so W0 can edit PROJECT-OVERVIEW.md). Split the job: one lead agent breaks a too-big
+task into pieces, hands each to a helper with its own small fresh window, and
+composes their summaries. Schema 1.4 adds parallel lanes.
+
+### W0 — consistency fixes from PROJECT-OVERVIEW.md (this milestone)
+
+Folds the audit findings in *before* the series grows, so Episode 04 doesn't
+compound them. Kept as separate concerns; prior-episode behaviour otherwise
+untouched (the whole corpus still validates and plays).
+
+- **A1 — Ep 02 palette breach fixed.** Removed per-source `faviconHue` colouring
+  from `SourcesAnswerPanel.tsx`. Source chips are now neutral panel chips with a
+  small document glyph (cyan when read, muted otherwise), told apart by their
+  label/url; the read/unread state carries in the border + `read`/`✕ unread`/
+  `found` micro-label, not a hue. Citation threads (underlay + drawn stroke) are
+  `var(--color-tool)` signal cyan only; the cited-span hover highlight is a cyan
+  underline. Hover/focus a citation still isolates its thread group (the thread →
+  source mapping). No `boxShadow` glow on chips (was `0 0 6px hue`) — §6 keeps
+  bloom in WebGL only. Result: the whole series is inside the fixed §6 palette.
+  `faviconHue` deprecated in `schema.ts` + `docs/trace-format.md`, kept required
+  for back-compat (no renderer reads it); traces + `trace.schema.json` unchanged.
+- **A2 — Ep 02 layout fixed.** `ReadingReplay.tsx` is back on the shared 3-across
+  grid `md:grid-cols-[1.15fr_0.85fr_1fr]` (transcript | context | sources+answer),
+  dropping the 2-over-1 split. The sources panel is now a fixed-height scrolling
+  column like the others; the panel's internal layout stacks sources-over-answer
+  (was `md:flex-row-reverse`), so citation threads arc *up* the column from each
+  cited span to its chip. Threads are measured relative to the panel container,
+  which scrolls with its content, so the arcs stay aligned when the column
+  scrolls. Mobile tabs unchanged.
+- **A3 — Ep 1.5 hero voice fixed.** On-page H1 `Episode15.tsx`: "Where agents go
+  wrong" → "What happens when the loop goes wrong?" (matches the 01/02/03
+  interrogative hero voice). The subline ("Episode 01 showed the loop working. It
+  doesn't always.") still reads. Page `<title>` + `og:title` in
+  `episodes/where-agents-go-wrong/index.html` left as "Where agents go wrong" so
+  already-shared URLs keep their previews. CI body-grep sentinel is "Two ideas
+  carry this episode" (unaffected).
+- **A4 — documented, not changed.** Series interaction rule stated in NOTES +
+  PROJECT-OVERVIEW: **concept scenes are scroll-scrubbed; replays are
+  player-driven** (deliberate, per PLAN's mobile decision). Not an
+  inconsistency — a rule a viewer learns once: teaching marquees advance with
+  scroll; the transport-driven replay never ties to scroll.
+
+Verified (build → preview → Playwright): 63 tests green, 7 traces validate,
+schema diff clean, build prerenders all 5 pages. Ep 02 replay played to the end —
+grid `429:317:373px` (the 1.15:0.85:1 ratio), 3 citation threads all cyan
+`#5CCFE6`, chips cyan-when-read / muted otherwise (zero per-source hues), 0
+console errors; mobile 390px no overflow, 3 tabs one-at-a-time. Ep 1.5 H1 is the
+new question; `<title>`/`og:title` unchanged. Budgets ~370–375 KB gz on 01/1.5/02
+(only the ep02/ep15 entry chunks changed, both smaller). Committed on
+`feature/episode-04` (3 commits). Demo shown.
+
+### W1 — schema 1.4 + the party trace (this milestone)
+
+Schema bumped to **1.4**, backward compatible (1.0–1.3 all validate/render
+unchanged; a dedicated test re-validates all seven prior traces and asserts their
+versions are untouched). This is the format's biggest structural test — parallel
+lanes — so the fold is now per-agent while staying identical for single-agent
+traces.
+
+Additions, all optional:
+- **top-level `agents` registry** `{ agentId, name, contextWindowTokens }[]` — each
+  helper has its own small window. The lead is implicit (`agentId: "lead"`, window
+  = `meta.contextWindowTokens`) and may NOT be declared.
+- **`agentId?` on every event** (added to `eventBase`) — whose window it belongs
+  to, default `"lead"`.
+- **`agent_spawn`** `{ spawnedAgentId, task }` and **`agent_result`** `{ summary }`.
+
+**Token routing (the crux).** `windowOwner` ≠ the acting agent for the two new
+types: a **spawn seeds the HELPER's window and resets it** (fresh brief, so a
+re-brief clears the first attempt), and is NOT charged to the lead — that's how
+delegation keeps the lead light. A **result lands in the LEAD's window** as one
+condensed item (Ep 03's lossy-digest grammar), not the reporting helper's. Every
+other event lands in its own agent's window.
+
+**Schema fold (superRefine) is now per-lane.** One `{ window, running, live }`
+lane per agent; eviction/compaction/session_break operate on the owner lane;
+`0 ≤ running ≤ window` is checked per lane. For a trace with no `agents` this is
+exactly the old single-lead fold (why all 63 prior tests passed untouched). New
+integrity rules: referenced agent ids must be declared + unique; `"lead"` can't be
+declared; only the lead spawns; a helper can't act/report before it's spawned;
+can't spawn the lead; a helper window overflow is an error.
+
+**Engine** (`replay.ts`): per-lane derivation, `frame.lanes: LaneState[]` (lead +
+helpers, stable set, helpers empty until spawned) + `frame.activeAgentId` (the
+lane whose window changed — spawn→helper, result→lead). `contextItems`/`tokensUsed`
+still = the LEAD lane, so shared components are unchanged. World state (artifact
+files, source registry) stays global across agents. `LEAD_AGENT_ID` exported.
+Exhaustive `event.type` sites updated (as every bump): `eventMeta.ts` (SPAWN cyan /
+REPORT muted + `eventBody`), `palette.ts` (agent_spawn→tool cyan, agent_result→
+system grey = the lossy-digest colour).
+
+**`validate-traces.ts`** now reads per-lane peaks straight off the engine frames
+(no re-implemented fold), reporting the lead peak + the tightest helper lane.
+
+**The trace** (`traces/plan-birthday-party.trace.json`, 28 events, v1.4, lead
+window 2400, 3 helpers × 1400): "Plan a surprise 30th birthday." Lead splits into
+VENUE / FOOD / INVITES briefs (the "center of attention" detail deliberately
+withheld from FOOD — the plant), three lanes fill in interleaved parallel, VENUE's
+first pick is over budget (the snag → lead re-briefs it, fresh window), FOOD's
+result surfaces a surprise-spoiling gong-announcement *because* its brief lacked
+the detail (lead catches it against the original ask), revised VENUE lands, lead
+composes `party-plan.md` (artifact heals) + a final answer with NO citations (the
+lead composes from summaries, never the helpers' sources — thematically honest).
+Lanes: lead peak **1090/2400**, VENUE **730/1400**, FOOD 630, INVITES 230 — three
+small healthy windows where one would have drowned. Engine + validator agree on
+every number.
+
+Tests: **83 green** (was 63; +12 schema for 1.4 rules + backward-compat, +8 engine
+for lane derivation). 8 traces validate. `schema:build` regenerated + idempotent
+(CI git-diff will pass). Full build green (5 pages prerender — the Episode 04 page
+is W2). Demo = read the party trace as a screenplay.
+
+**Concurrency model, documented honestly** (docs/trace-format.md): events are one
+flat, globally ordered array; "parallel" lanes are a presentational projection —
+the engine folds in file order, nothing runs at the same literal instant, which is
+also roughly true of a real multi-agent system's merged log.
+
+### W2 — the lane replay rig (this milestone)
+
+New page `episodes/how-agents-work-together/` (`src/episode04/`), wired like Ep 02/03:
+`vite.config` input + `entry-server.renderEpisode04` + `prerender.ts` inject + a
+body-only CI grep ("its own small, fresh window"). Hero + the S5 **lane replay** +
+a minimal series-index close; the S2 recap, S3 fan-out scene, S4 handoffs figure,
+and full S6 come in W3/W4 (the U2/V2 pattern).
+
+**Shared rig, extended (backward compatible — all prior episodes unregressed).**
+The whole point of W0 was one shared rig; W2 keeps it, teaching the two shared
+components about lanes:
+- **`TranscriptPanel`** — dimming now keys off the union of ALL lanes'
+  `contextItems` (was just `frame.contextItems`), so a helper's events aren't
+  falsely dimmed, and venue's first-attempt events correctly dim after the
+  re-brief resets its window. A small per-lane **tick** badge marks helper work
+  (`→ VENUE` on a spawn, `VENUE →` on a result, `VENUE` on the helper's own
+  events); helper-internal events indent (`ml-4`) to read as a sub-lane. New
+  `EventText` for `agent_spawn` (the brief, cyan-ruled = the helper's whole
+  starting context) and `agent_result` (the summary, muted/italic = a lossy
+  digest). Prior traces have no `agents`, so no ticks/indents appear — verified
+  Ep 01 transcript renders 20 rows, 0 ticks.
+- **`Timeline`** — optional `markers?: {index,label}[]` prop renders small
+  clickable flags above the strip (seek on click), positioned by event fraction.
+  No prop = unchanged for every prior episode.
+
+**New Episode-04 components (`src/episode04/`):**
+- **`LaneMeters`** — the context panel is now a grid of windows (lead + 3
+  helpers) off `frame.lanes`. Each cell: name, a stacked bar (event-type colours,
+  per-lane width), `CTX used/window`, fill %. The lane the current event changed
+  (`frame.activeAgentId`) gets the one cyan accent (border + ring + faint panel
+  bg); helpers show "waiting for a brief…" until spawned. **No per-lane hue** —
+  lanes are told apart by name + grid position (the W0 lesson, not repeated).
+  Desktop 2×2; mobile a lane switcher that follows the active lane.
+- **`PlanPanel`** — the third panel; the artifact heals here (`party-plan.md`
+  appears when the lead composes it), MemoryPanel's file-card grammar.
+- **`LaneReplay`** — the S5 rig: shared `Controls`/`Timeline`(+markers)/
+  `LoopIndicator`/`TranscriptPanel`, 3-across `md:grid-cols-[1.15fr_0.85fr_1fr]`
+  (Transcript | Context windows | The plan), mobile tabs. Markers resolved by
+  event id: e16 "over budget" (the snag) + e21 "re-brief" (the adaptation).
+
+**Verified in-browser** (build → preview → Playwright, 0 console errors; 1 warning
+= three.js `THREE.Clock`, series-wide): mid-run (e15) the four windows read
+**Lead 210/2400 · VENUE 730/1400 · FOOD 630 · INVITES 230** filling in parallel;
+end reads **Lead 1090** (holds the summaries), **VENUE 440** (re-brief reset),
+`party-plan.md` composed. Active-lane highlight lands on VENUE at e07 (cyan border,
+after the 300ms transition). Both timeline markers present + clickable. Mobile
+390px: no overflow, replay tabs (Transcript/Windows/The plan) + lane switcher
+(Lead/VENUE/FOOD/INVITES), one panel at a time. Prerender ships hero + replay text
+and **no `<canvas>`** (the no-JS/reduced path). Ep 01 unregressed.
+
+§1 budget: ep04 chunk **7.8 KB gz**, per-page ≈ **364 KB gz** (global + three.js +
+demoStream + episode04 + HeroAmbient + lazy scroll) — under 450, the lightest
+WebGL page since it has no dedicated scene yet. **W3's fan-out canvas is the flagged
+budget risk** — measure it early. 83 tests green, 8 traces validate, all 6 CI
+sentinels pass, full build green (6 pages prerender). Demo = play the Episode 04
+replay end-to-end.
+
+### W3 — the fan-out scene + handoffs figure (this milestone)
+
+The visual-iteration milestone: S3's WebGL bloom-and-parallel-fill (the share
+clip) and the S4 handoffs figure, wired into the page between the hero and the
+replay (Hero → S3 → S4 → S5 → close). Interaction rule honored (W0/A4): S3 is a
+concept scene → **scroll-scrubbed**; the S5 replay stays player-driven.
+
+- **`FanOutCanvas.tsx`** — a dedicated in-flow `<Canvas>` (the Ep 02/03 precedent,
+  NOT the tracked-overlay slot machinery), structurally a sibling of
+  `CompactionCanvas`: instanced icosahedra, selective bloom (`luminanceThreshold
+  1`, HDR flare on arrival), box + `Edges` (§6), everything a **pure function of
+  scroll progress** so scrubbing back just re-evaluates. Three phases: task
+  (0–0.18) — three briefs clustered bright in the lead window; split (0.18–0.40) —
+  they fly out on bezier arcs to three helper windows that **bloom in** (group
+  scale 0→1, staggered per lane); fill (0.40–1) — each helper window fills
+  bottom-up across its own span with a **distinct rhythm** (VENUE first/fastest/
+  fullest 92 particles, FOOD 78, INVITES 48 — mirroring the trace's 730/630/230).
+  **No per-lane hue** — particles keep the event-type palette (cyan/amber); lanes
+  differ by position + rhythm (the W0 lesson). The fan-out canvas chunk is only
+  **2.0 KB gz** — it reuses the already-loaded three.js/SceneA + Edges + Bloom.
+- **`FanOutSection.tsx`** — CSS-sticky pinned (320vh), rAF-throttled scroll→
+  progress ref, `useGlReady()` gate, IntersectionObserver frameloop gating.
+  3 DOM stage captions (One job / Splitting / In parallel) + a "1 → 3 windows"
+  readout + `sr-only role=status`. Reduced-motion / no-WebGL / SSR → a compact
+  static before/after figure (one window's task → three part-full windows), no
+  tall scroll area.
+- **`HandoffFigure.tsx`** (S4, DOM) — a helper's full crowded window vs. the one
+  small, greyed, **softened** (blur + desaturate) block the lead receives, reusing
+  Ep 03's lossy grammar. The PM sentence in civilian words: "The lead never sees
+  the work — only the report … you keep the gist and lose the detail — until the
+  detail that got dropped was the one that mattered."
+
+**Verified in-browser** (build → preview → Playwright, 0 console errors; 2 warnings
+= three.js `THREE.Clock`, series-wide): the fan-out canvas mounts and **renders
+~1,500 draw calls/sec while in view, 0 off-screen** (IntersectionObserver gating
+works, §8). Scrubbing scroll drives the three phases cleanly (p 0.04 → "One job /
+1 window", 0.30 → "Splitting / 1 → 3 windows", 0.72 → "In parallel / 3 windows").
+Prerender ships the S3 + S4 copy and **no `<canvas>`** (reduced-motion/no-JS path).
+Mobile 390px: no horizontal overflow anywhere down the page; S3 + S4 present.
+
+**Budget risk resolved.** ep04 per-page ≈ **375 KB gz** (FanOutCanvas adds ~4 KB
+net over W2 — 2 KB canvas + 2 KB episode chunk — because three.js was already
+pulled by HeroAmbient). Well under 450. 83 tests, 8 traces, all 6 CI sentinels,
+build green (6 pages prerender).
+
+**Share-clip recording path verified** — the scene is deterministic, scrub-safe,
+and loopable, so a straight screen recording of the fan-out needs no editing. The
+actual 15-sec capture is owner-machine-only (headless RAF can't wall-clock-sample
+eased motion) — same launch-blocking status as the other four clips, per
+docs/launch.md; the W4 launch section documents the recipe.
+
+---
+
+## Episode 04 · W4 — copy, polish, ship (season-one close)
+
+The last milestone: the two remaining narrative sections, the audit gate, the
+budget re-measure across all five pages, and every ship-time asset.
+
+**Copy — the two missing sections.**
+- **S2 recap** (`Episode04.tsx` → `Recap`, between Hero and the fan-out): "The
+  problem so far / One window, and it keeps filling up." Frames delegation as the
+  series' *third* way out of the finite window, next to Retrieval (Ep 02) and
+  Memory (Ep 03) — three cards, Delegation the cyan-accented "this episode." Ties
+  Ep 04 back into the season spine instead of standing alone.
+- **S6 close** was already built in W2/W3 (`Close`: series index with 04 "You are
+  here", the 05 suggestion card, "Five episodes, one engine"); W4 only reworded
+  the open-source card ("Five different runs …").
+
+**Writing-guidelines pass** (fetched fresh). Applied the non-conflicting rules,
+consciously kept house style where the two Vercel guides fight §6:
+- Kept — em dashes (the series' signature punctuation) and the rhetorical-question
+  hero ("Why would an AI need a team?", matching Ep 1.5's W0 rewrite). These are
+  the established voice; §6/house voice wins over the skill (CLAUDE.md).
+- Fixed — banned filler in shipped UI copy: `FanOutSection` S3 caption "It's
+  really three jobs" → "That one job is three …"; `Close` "Five very different
+  runs" → "Five different runs". "just" hits were all in code comments (out of
+  scope). Marketing "just watch" in launch.md kept (that file's tweet voice).
+
+**Web-design audit** (web-interface-guidelines, fetched fresh). Clean except one
+medium: the lane-meter CTX/`%` readouts update per-event but weren't tabular →
+digit jitter. Fixed with `tabular-nums` on the two `LaneCell` spans (scoped to
+Ep 04, not the shared `.micro-label`). Everything else already covered site-wide:
+`:focus-visible` ring is global (`global.css`), the `prefers-reduced-motion` reset
+is global, the mobile lane switcher is a real `role=tablist` of native buttons
+with `aria-selected`, each lane bar carries a `role=img` + descriptive
+`aria-label`, headings are one-H1-then-ordered-H2, empty lanes render "waiting for
+a brief…" (proper `…`). Timeline snag-markers (W2) are text-label buttons (not
+icon-only), so no `aria-label` needed.
+
+**Animation review** (manual review-animations read; motion was authored under the
+emil-design-eng tier in W2/W3). No medium+ findings: reveals animate only
+opacity/transform, the fan-out is a pure function of scroll progress (interruptible
+by nature, frameloop gated by IntersectionObserver, and behind `useGlReady` which
+excludes reduced-motion → static fallback), caption cross-fade re-keys per stage.
+The lane-bar `transition: width 300ms` is non-compositor but is the exact house
+context-meter pattern shared by all five episodes — kept for consistency.
+
+**Budgets re-measured** (initial JS, script src + modulepreload, gzipped, off the
+real `dist` HTML). All under the §1 450 KB ceiling:
+`landing 61.1 · 01 90.0 · 1.5 343.1 · 02 345.1 · 03 346.4 · 04 343.8 KB gz`.
+Ep 04 came in at **343.8** — a touch *leaner* than 02/03 (the W3 "≈375" was a
+conservative estimate; the actual modulepreload set is smaller). W4's new DOM
+sections add no measurable weight.
+
+**Ship assets.**
+- **OG image** `public/og/episode-04.png` (1200×630, on-brand): built a
+  self-contained HTML with the embedded site fonts (Space Grotesk + IBM Plex
+  Mono), screenshotted at exactly 1200×630. Same grammar as Ep 03's card —
+  telemetry grid, kicker, big display H1, mono subtitle, bottom status line
+  ("TEAM 1 lead → **3 helpers** · IN PARALLEL"), right-side bordered viz showing
+  the LEAD window fanning via three cyan bezier arcs into VENUE/FOOD/INVITES
+  helper windows filling bottom-up. Already wired in the episode `<head>` (W2).
+- **Landing** (`Landing.tsx`): 04 flipped from the old suggestion slot to a LIVE
+  card → the episode; a new 05 card carries the "What should we open up next?"
+  suggestion (Open). Verified in-browser: 01–04 LIVE, 05 Open.
+- **llms.txt**: Episode 04 paragraph (the birthday-party delegation run: snag +
+  spoiler-catch + re-brief), the 1.4 schema note (agents registry + per-event
+  `agentId` + `agent_spawn`/`agent_result`), the Pages entry, "Four → Five
+  episodes."
+- **README**: full Episode 04 section (fan-out / handoffs-are-summaries / replay,
+  the 1.4 schema paragraph, `docs/media/fan-out.gif` hero — *GIF still to be
+  recorded, owner-machine*), tagline moved to "**Five episodes, one engine**";
+  Ep 03's "season finale / Four episodes" framing softened.
+- **docs/launch.md**: Episode 04 launch section — angle "watch an AI split itself
+  into a team," 4-post X thread + LinkedIn (the "what is multi-agent, really?"
+  cut) + optional season-one Show HN wrap + the fan-out clip recipe (S3 pinned
+  scene, deterministic/scrub-safe).
+
+**Verified** (build → preview → Playwright): `tsc` + build green, all **6 pages
+prerender** (incl. landing), **83 tests**, **8 traces validate** (birthday-party:
+lead peak 1090/2400 · 3 helpers, tightest VENUE 730/1400), **0 console errors**,
+Recap + fan-out + landing cards render correctly, OG resolves to episode-04.png.
+
+**Not done / owner-machine (launch-blocking, same status as all prior clips):**
+the fan-out share GIF (`docs/media/fan-out.gif`) and OG-free video capture — a
+headless RAF can't wall-clock-sample eased/scroll motion; recipe is in launch.md.
+
+**Episode 05 deliberately left off the site** (owner instruction). The landing 05
+card is only the open "suggest a topic" slot; no episode-05 page, route, or trace
+exists. Season one = five shipped episodes (01, 1.5, 02, 03, 04).

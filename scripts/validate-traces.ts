@@ -1,6 +1,7 @@
 import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { traceSchema } from "../src/trace/schema";
+import { createReplay, LEAD_AGENT_ID } from "../src/trace/replay";
 
 const DIR = "traces";
 const files = readdirSync(DIR)
@@ -17,26 +18,28 @@ for (const file of files) {
   const raw: unknown = JSON.parse(readFileSync(join(DIR, file), "utf8"));
   const result = traceSchema.safeParse(raw);
   if (result.success) {
-    // Peak live usage, folding the same way the engine does: +tokens per event,
-    // −tokens per eviction. This is the number that must fit the window.
-    let running = 0;
-    let peak = 0;
-    for (const event of result.data.events) {
-      if (event.type === "context_evicted") {
-        running -= event.tokens;
-      } else if (event.type === "compaction") {
-        running += event.tokens - event.tokensBefore;
-      } else if (event.type === "session_break") {
-        running = 0;
-      } else {
-        running += event.tokens;
+    // Peak per-lane usage, read straight off the engine's derived frames — the
+    // number that must fit each window. For a single-agent trace this is just
+    // the lead lane, unchanged from before 1.4.
+    const replay = createReplay(result.data);
+    const peaks = new Map<string, { peak: number; window: number; name: string }>();
+    for (let i = 0; i < replay.length; i++) {
+      for (const lane of replay.stateAt(i).lanes) {
+        const entry = peaks.get(lane.agentId) ?? { peak: 0, window: lane.window, name: lane.name };
+        entry.peak = Math.max(entry.peak, lane.tokensUsed);
+        peaks.set(lane.agentId, entry);
       }
-      peak = Math.max(peak, running);
     }
-    console.log(
-      `✓ ${file} — ${result.data.events.length} events, ` +
-        `peak ${peak}/${result.data.meta.contextWindowTokens} tokens`,
-    );
+    const lead = peaks.get(LEAD_AGENT_ID)!;
+    let line = `✓ ${file} — ${result.data.events.length} events, lead peak ${lead.peak}/${lead.window}`;
+    const helpers = [...peaks].filter(([id]) => id !== LEAD_AGENT_ID);
+    if (helpers.length > 0) {
+      const tightest = helpers.reduce((a, b) =>
+        b[1].peak / b[1].window > a[1].peak / a[1].window ? b : a,
+      );
+      line += ` · ${helpers.length} helpers, tightest ${tightest[1].name} ${tightest[1].peak}/${tightest[1].window}`;
+    }
+    console.log(line);
   } else {
     failed = true;
     console.error(`✗ ${file}`);

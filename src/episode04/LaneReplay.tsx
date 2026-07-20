@@ -1,31 +1,44 @@
 import { useState, type ReactNode } from "react";
 import { ReplayProvider } from "../episode/replay/store";
 import { Controls } from "../episode/replay/Controls";
-import { Timeline } from "../episode/replay/Timeline";
+import { Timeline, type TimelineMarker } from "../episode/replay/Timeline";
 import { LoopIndicator } from "../episode/replay/LoopIndicator";
 import { TranscriptPanel } from "../episode/replay/TranscriptPanel";
-import { ContextMeter2D } from "../episode/replay/ContextMeter2D";
-import { SourcesAnswerPanel } from "./SourcesAnswerPanel";
+import { LaneMeters } from "./LaneMeters";
+import { PlanPanel } from "./PlanPanel";
 import type { Trace } from "../trace/schema";
 
-type TabId = "transcript" | "context" | "sources";
+type TabId = "transcript" | "windows" | "plan";
 
 const TABS: Array<{ id: TabId; label: string }> = [
   { id: "transcript", label: "Transcript" },
-  { id: "context", label: "Context" },
-  { id: "sources", label: "Sources" },
+  { id: "windows", label: "Windows" },
+  { id: "plan", label: "The plan" },
+];
+
+// The coordination beats worth finding on the timeline: the snag (venue's first
+// pick is over budget) and the lead's adaptation (it re-briefs venue). Resolved
+// by event id so they survive an edit to the trace.
+const MARKER_SPEC: Array<{ id: string; label: string }> = [
+  { id: "e16", label: "over budget" },
+  { id: "e21", label: "re-brief" },
 ];
 
 /**
- * S5 — the replay showpiece (Episode 02). Episode 01's shared three-panel rig,
- * unchanged: transcript | context window | sources + answer, in the series'
- * 3-across grid. User-driven (buttons + scrubber + autoplay), never tied to
- * scroll. Desktop shows all three; mobile tabs between them with the timeline
- * persistent. The context panel is the shared 2D meter — Episode 02's WebGL
- * work is the S3 funnel, a separate scene.
+ * S5 — the replay showpiece (Episode 04). The shared three-panel rig, its
+ * context panel now a grid of windows (lead + three helpers). Play it and watch
+ * one task fan out into parallel windows, hit a snag, adapt, and converge into
+ * one plan. User-driven (buttons + scrubber + autoplay), never tied to scroll.
+ * Desktop shows all three panels; mobile tabs between them. Fully usable with no
+ * WebGL — the fan-out scene (S3) is the WebGL dramatization of this same grid.
  */
-export function ReadingReplay({ trace }: { trace: Trace }) {
+export function LaneReplay({ trace }: { trace: Trace }) {
   const [tab, setTab] = useState<TabId>("transcript");
+
+  const markers: TimelineMarker[] = MARKER_SPEC.map((spec) => ({
+    index: trace.events.findIndex((event) => event.id === spec.id),
+    label: spec.label,
+  })).filter((marker) => marker.index >= 0);
 
   return (
     <ReplayProvider trace={trace}>
@@ -37,11 +50,12 @@ export function ReadingReplay({ trace }: { trace: Trace }) {
             className="mt-3 text-3xl font-medium tracking-tight text-balance md:text-4xl"
             style={{ fontFamily: "var(--font-display)" }}
           >
-            Watch it search, read, and cite
+            Watch one agent split into a team
           </h2>
           <p className="mt-3 max-w-xl text-[var(--color-muted)]">
             A scripted run, played back event by event. Step through it — or press play and watch the
-            answer assemble, with each claim threaded back to the page it came from.
+            lead hand out three briefs, the helper windows fill in parallel, one come back over budget,
+            and the lead adapt and compose the final plan.
           </p>
 
           <div className="mt-10 flex flex-col gap-4 rounded-lg border border-[var(--color-hairline)] bg-[var(--color-panel)]/60 p-4 md:flex-row md:items-start md:gap-6 md:p-5">
@@ -49,7 +63,7 @@ export function ReadingReplay({ trace }: { trace: Trace }) {
               <Controls />
               <LoopIndicator />
             </div>
-            <Timeline />
+            <Timeline markers={markers} />
           </div>
 
           {/* Mobile tab bar (hidden on md+ where all three panels show). */}
@@ -86,19 +100,16 @@ export function ReadingReplay({ trace }: { trace: Trace }) {
             ))}
           </div>
 
-          {/* Desktop: the series' shared 3-across grid — transcript | context |
-              sources + answer. Mobile: the tabs show one panel at a time. The
-              sources panel scrolls, so its citation threads arc up the column
-              from each cited span to the chip it came from. */}
-          <div className="mt-4 md:grid md:grid-cols-[1.15fr_0.85fr_1fr] md:gap-4">
-            <Panel id="transcript" title="Transcript" activeTab={tab} scroll fixedHeight>
+          {/* Desktop: the shared 3-across grid — transcript | windows | plan. */}
+          <div className="mt-4 grid gap-4 md:grid-cols-[1.15fr_0.85fr_1fr]">
+            <Panel id="transcript" title="Transcript" activeTab={tab} scroll>
               <TranscriptPanel />
             </Panel>
-            <Panel id="context" title="Context window" activeTab={tab} scroll fixedHeight>
-              <ContextMeter2D />
+            <Panel id="windows" title="Context windows" activeTab={tab}>
+              <LaneMeters />
             </Panel>
-            <Panel id="sources" title="Sources & answer" activeTab={tab} scroll fixedHeight>
-              <SourcesAnswerPanel />
+            <Panel id="plan" title="The plan" activeTab={tab} scroll>
+              <PlanPanel />
             </Panel>
           </div>
         </div>
@@ -112,14 +123,12 @@ function Panel({
   title,
   activeTab,
   scroll = false,
-  fixedHeight = false,
   children,
 }: {
   id: TabId;
   title: string;
   activeTab: TabId;
   scroll?: boolean;
-  fixedHeight?: boolean;
   children: ReactNode;
 }) {
   return (
@@ -127,7 +136,7 @@ function Panel({
       role="tabpanel"
       id={`panel-${id}`}
       aria-labelledby={`tab-${id}`}
-      className={`${activeTab === id ? "flex" : "hidden"} ${fixedHeight ? "h-[520px]" : ""} flex-col overflow-hidden rounded-lg border border-[var(--color-hairline)] bg-[var(--color-panel)]/40 md:flex`}
+      className={`${activeTab === id ? "flex" : "hidden"} h-[520px] flex-col overflow-hidden rounded-lg border border-[var(--color-hairline)] bg-[var(--color-panel)]/40 md:flex`}
     >
       <div className="border-b border-[var(--color-hairline)] px-4 py-2.5">
         <span className="micro-label">{title}</span>

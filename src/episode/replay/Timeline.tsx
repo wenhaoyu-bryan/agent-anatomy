@@ -29,13 +29,20 @@ function computeSegments(events: TraceEvent[]) {
   });
 }
 
+/** A labelled point of interest on the timeline (v1.4) — e.g. the snag beat. */
+export interface TimelineMarker {
+  index: number;
+  label: string;
+}
+
 /**
  * Scrubber for the replay. The real control is a native range input
  * (arrow keys step events for free — PLAN §8); the event dots above it
  * are a purely visual telemetry strip. When the run spans multiple sessions
- * (v1.3), a label row above the strip marks each session.
+ * (v1.3), a label row above the strip marks each session. Optional `markers`
+ * flag key beats (v1.4) — small buttons that seek to that event.
  */
-export function Timeline() {
+export function Timeline({ markers }: { markers?: TimelineMarker[] } = {}) {
   const events = useReplay((s) => s.trace.events);
   const frame = useReplay((s) => s.frame);
   const length = useReplay((s) => s.length);
@@ -75,6 +82,30 @@ export function Timeline() {
                   </span>
                 )}
               </div>
+            );
+          })}
+        </div>
+      )}
+      {markers && markers.length > 0 && length > 1 && (
+        <div className="relative mb-1 h-4">
+          {markers.map((marker) => {
+            const left = (marker.index / (length - 1)) * 100;
+            const reached = frame.index >= marker.index;
+            return (
+              <button
+                key={marker.index}
+                type="button"
+                onClick={() => seek(marker.index)}
+                title={`Jump to: ${marker.label}`}
+                className="pressable absolute top-0 -translate-x-1/2 rounded-sm border px-1.5 font-mono text-[10px] tracking-wide whitespace-nowrap uppercase transition-colors"
+                style={{
+                  left: `${left}%`,
+                  borderColor: reached ? "var(--color-tool)" : "var(--color-hairline)",
+                  color: reached ? "var(--color-ink)" : "var(--color-muted)",
+                }}
+              >
+                {marker.label}
+              </button>
             );
           })}
         </div>

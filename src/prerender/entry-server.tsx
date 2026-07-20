@@ -5,6 +5,7 @@ import { Episode } from "../episode/Episode";
 import { Episode15 } from "../episode15/Episode15";
 import { Episode02 } from "../episode02/Episode02";
 import { Episode03 } from "../episode03/Episode03";
+import { Episode04 } from "../episode04/Episode04";
 
 /**
  * SSR entry for the build-time HTML snapshot (§8: view-source must show the
@@ -47,6 +48,14 @@ export function renderEpisode03(): string {
   return renderToString(
     <StrictMode>
       <Episode03 />
+    </StrictMode>,
+  );
+}
+
+export function renderEpisode04(): string {
+  return renderToString(
+    <StrictMode>
+      <Episode04 />
     </StrictMode>,
   );
 }

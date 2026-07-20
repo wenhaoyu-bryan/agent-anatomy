@@ -13,7 +13,9 @@ import type { TraceEvent } from "../../trace/schema";
 export function TranscriptPanel() {
   const frame = useReplay((s) => s.frame);
   const events = useReplay((s) => s.trace.events);
+  const agentDefs = useReplay((s) => s.trace.agents);
   const currentRef = useRef<HTMLLIElement>(null);
+  const agentName = new Map((agentDefs ?? []).map((agent) => [agent.agentId, agent.name]));
 
   // Keep the current event in view by scrolling ONLY the panel. scrollIntoView
   // would climb to the document and yank the page while the reader is
@@ -40,11 +42,12 @@ export function TranscriptPanel() {
   }
 
   const shown = events.slice(0, frame.index + 1);
-  // What's still live in the window right now (the engine already folds
-  // evictions, compaction, and session breaks). Anything shown but not live has
-  // dropped out — dim it. Markers (eviction / session break) aren't window
-  // items themselves, so they're never dimmed.
-  const liveIds = new Set(frame.contextItems.map((event) => event.id));
+  // What's still live across ALL lanes right now (the engine folds evictions,
+  // compaction, session breaks, and per-agent resets). An event is dimmed only
+  // if it's live in no lane — e.g. a helper's first attempt after its window was
+  // reset by a re-brief. For a single-agent trace this is just the lead window,
+  // unchanged. Markers aren't window items, so they're never dimmed.
+  const liveIds = new Set(frame.lanes.flatMap((lane) => lane.contextItems.map((event) => event.id)));
 
   return (
     <ol className="flex flex-col gap-1.5 p-3">
@@ -53,6 +56,23 @@ export function TranscriptPanel() {
         const isMarker = event.type === "context_evicted" || event.type === "session_break";
         const isDropped = !isMarker && !liveIds.has(event.id);
         const meta = EVENT_META[event.type];
+        // Which lane this event belongs to (v1.4) — a small tick tells helper
+        // work apart from the lead's, and nests it. Null for the lead / pre-1.4.
+        const laneId =
+          event.type === "agent_spawn"
+            ? event.spawnedAgentId
+            : (event.agentId ?? "lead");
+        const laneName = agentName.get(laneId) ?? laneId;
+        const laneTick =
+          event.type === "agent_spawn"
+            ? `→ ${agentName.get(event.spawnedAgentId) ?? event.spawnedAgentId}`
+            : event.type === "agent_result"
+              ? `${laneName} →`
+              : laneId !== "lead"
+                ? laneName
+                : null;
+        const isHelperWork =
+          laneId !== "lead" && event.type !== "agent_spawn" && event.type !== "agent_result";
         return (
           <li
             key={event.id}
@@ -60,13 +80,20 @@ export function TranscriptPanel() {
             aria-current={isCurrent ? "step" : undefined}
             className={`replay-item rounded-r border-l-2 py-2 pr-3 pl-3 ${
               isCurrent ? "bg-[var(--color-panel)]" : "bg-transparent"
-            } ${isMarker ? "border-dashed" : ""}`}
+            } ${isMarker ? "border-dashed" : ""} ${isHelperWork ? "ml-4" : ""}`}
             style={{ borderLeftColor: meta.color, opacity: isDropped ? 0.4 : 1 }}
           >
             <div className="flex items-baseline justify-between gap-3">
-              <span className="micro-label" style={{ color: meta.color }}>
-                EVT {String(i + 1).padStart(2, "0")} · {meta.label}
-                {isDropped ? " · dropped" : ""}
+              <span className="flex min-w-0 items-baseline gap-2">
+                <span className="micro-label" style={{ color: meta.color }}>
+                  EVT {String(i + 1).padStart(2, "0")} · {meta.label}
+                  {isDropped ? " · dropped" : ""}
+                </span>
+                {laneTick && (
+                  <span className="shrink-0 rounded-sm border border-[var(--color-hairline)] px-1.5 font-mono text-[10px] tracking-wide text-[var(--color-muted)] uppercase">
+                    {laneTick}
+                  </span>
+                )}
               </span>
               <span className="micro-label shrink-0">
                 <TokenDelta event={event} />
@@ -162,6 +189,33 @@ function EventText({ event }: { event: TraceEvent }) {
         Read <span className="text-[var(--color-tool)]">{event.path}</span> back into the window — the
         notes are context again.
       </p>
+    );
+  }
+  // Multi-agent (v1.4): a spawn is the brief the lead hands over — it becomes the
+  // helper's whole starting context. A result is the one condensed summary the
+  // helper hands back — lossy, so it reads like a compaction digest.
+  if (event.type === "agent_spawn") {
+    return (
+      <div className="mt-1.5">
+        <p className="font-mono text-[11px] text-[var(--color-muted)]">
+          The brief — the helper&rsquo;s window starts empty except for this.
+        </p>
+        <p className="mt-1 border-l border-[var(--color-tool)]/40 pl-2 font-mono text-[13px] leading-relaxed text-[var(--color-ink)]">
+          {event.task}
+        </p>
+      </div>
+    );
+  }
+  if (event.type === "agent_result") {
+    return (
+      <div className="mt-1.5">
+        <p className="font-mono text-[11px] text-[var(--color-muted)]">
+          Reports back — the lead receives this summary, not the work behind it.
+        </p>
+        <p className="mt-1 border-l border-[var(--color-muted)]/50 pl-2 font-mono text-[13px] leading-relaxed text-[var(--color-muted)] italic">
+          {event.summary}
+        </p>
+      </div>
     );
   }
   const body = eventBody(event);

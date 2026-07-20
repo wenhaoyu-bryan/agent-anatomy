@@ -7,6 +7,7 @@ import contextOverflow from "../../traces/context-overflow.trace.json";
 import badObservation from "../../traces/bad-observation-recovery.trace.json";
 import reheatRice from "../../traces/reheat-rice.trace.json";
 import tokyoTrip from "../../traces/tokyo-trip.trace.json";
+import birthdayParty from "../../traces/plan-birthday-party.trace.json";
 
 describe("trace schema — shipped trace files", () => {
   it("validates fix-broken-page.trace.json", () => {
@@ -321,6 +322,120 @@ describe("trace schema — v1.3 rules", () => {
   it("rejects reading a file that no earlier event wrote", () => {
     const events = mapEvent("memory_read", (event) => ({ ...event, path: "nope.md" }));
     expect(traceSchema.safeParse({ ...tokyo, events }).success).toBe(false);
+  });
+});
+
+describe("trace schema — episode 04 multi-agent delegation (v1.4)", () => {
+  it("validates plan-birthday-party as a v1.4 trace with three helpers", () => {
+    const trace = traceSchema.parse(birthdayParty);
+    expect(trace.version).toBe("1.4");
+    expect(trace.meta.id).toBe("plan-birthday-party");
+    expect(trace.agents).toHaveLength(3);
+    expect(new Set((trace.agents ?? []).map((agent) => agent.agentId))).toEqual(
+      new Set(["venue", "food", "invites"]),
+    );
+    const types = new Set(trace.events.map((event) => event.type));
+    expect(types).toContain("agent_spawn");
+    expect(types).toContain("agent_result");
+  });
+
+  it("hands the 'center of attention' detail to venue and invites, but NOT to food (the plant)", () => {
+    const trace = traceSchema.parse(birthdayParty);
+    const briefFor = (agentId: string) =>
+      trace.events.find(
+        (event) => event.type === "agent_spawn" && event.spawnedAgentId === agentId,
+      );
+    const venue = briefFor("venue");
+    const food = briefFor("food");
+    const invites = briefFor("invites");
+    const task = (e: typeof venue) => (e && e.type === "agent_spawn" ? e.task : "");
+    expect(task(venue)).toContain("center of attention");
+    expect(task(invites)).toContain("center of attention");
+    // Food's brief omits it — which is why food later surfaces the spoiler.
+    expect(task(food)).not.toContain("center of attention");
+  });
+
+  it("re-briefs venue with a second spawn after the first comes back over budget", () => {
+    const trace = traceSchema.parse(birthdayParty);
+    const venueSpawns = trace.events.filter(
+      (event) => event.type === "agent_spawn" && event.spawnedAgentId === "venue",
+    );
+    expect(venueSpawns).toHaveLength(2);
+    // The revised brief rules out the minimum-spend trap the first attempt hit.
+    const revised = venueSpawns[1];
+    expect(revised && revised.type === "agent_spawn" && revised.task).toContain("no minimum spend");
+  });
+
+  it("every prior trace still validates under 1.4 with its version untouched (backward compatible)", () => {
+    for (const raw of [
+      fixBrokenPage,
+      exampleMinimal,
+      loopTrap,
+      contextOverflow,
+      badObservation,
+      reheatRice,
+      tokyoTrip,
+    ]) {
+      expect(traceSchema.safeParse(raw).success).toBe(true);
+    }
+    expect(traceSchema.parse(fixBrokenPage).version).toBe("1.0");
+    expect(traceSchema.parse(contextOverflow).version).toBe("1.1");
+    expect(traceSchema.parse(reheatRice).version).toBe("1.2");
+    expect(traceSchema.parse(tokyoTrip).version).toBe("1.3");
+  });
+});
+
+describe("trace schema — v1.4 rules", () => {
+  const party = traceSchema.parse(birthdayParty);
+
+  it("rejects agents / agent_spawn / agent_result / agentId in a trace still declared 1.3", () => {
+    expect(traceSchema.safeParse({ ...party, version: "1.3" }).success).toBe(false);
+  });
+
+  it("rejects declaring the implicit lead in agents[]", () => {
+    const agents = [...(party.agents ?? []), { agentId: "lead", name: "Lead", contextWindowTokens: 999 }];
+    expect(traceSchema.safeParse({ ...party, agents }).success).toBe(false);
+  });
+
+  it("rejects a duplicate agent id in the registry", () => {
+    const agents = [...(party.agents ?? []), party.agents![0]!];
+    expect(traceSchema.safeParse({ ...party, agents }).success).toBe(false);
+  });
+
+  it("rejects an event assigned to an undeclared agent", () => {
+    const events = party.events.map((event) =>
+      event.id === "e07" ? { ...event, agentId: "ghost" } : event,
+    );
+    expect(traceSchema.safeParse({ ...party, events }).success).toBe(false);
+  });
+
+  it("rejects a helper acting before it was spawned", () => {
+    // Move venue's first thinking (e07) ahead of every spawn.
+    const e07 = party.events.find((event) => event.id === "e07")!;
+    const events = [e07, ...party.events.filter((event) => event.id !== "e07")];
+    expect(traceSchema.safeParse({ ...party, events }).success).toBe(false);
+  });
+
+  it("rejects an agent_result that reports as the lead instead of a helper", () => {
+    const events = party.events.map((event) =>
+      event.id === "e16" ? { ...event, agentId: "lead" } : event,
+    );
+    expect(traceSchema.safeParse({ ...party, events }).success).toBe(false);
+  });
+
+  it("rejects a helper whose window overflows its own (small) budget", () => {
+    // VENUE peaks at 730; shrink its window below that.
+    const agents = (party.agents ?? []).map((agent) =>
+      agent.agentId === "venue" ? { ...agent, contextWindowTokens: 500 } : agent,
+    );
+    expect(traceSchema.safeParse({ ...party, agents }).success).toBe(false);
+  });
+
+  it("rejects spawning the reserved lead agent", () => {
+    const events = party.events.map((event) =>
+      event.id === "e04" ? { ...event, spawnedAgentId: "lead" } : event,
+    );
+    expect(traceSchema.safeParse({ ...party, events }).success).toBe(false);
   });
 });
 

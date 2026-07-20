@@ -39,8 +39,9 @@ export function categoryOf(type: TraceEvent["type"]): Category {
     case "fetch":
     case "memory_write":
     case "memory_read":
-      // Web retrieval and memory file I/O are tool activity — cyan, like every
-      // other tool call/result.
+    case "agent_spawn":
+      // Web retrieval, memory file I/O, and handing a brief to a helper are all
+      // tool activity — cyan, like every other tool call/result.
       return "tool";
     case "assistant_message":
       return "assistant";
@@ -50,8 +51,10 @@ export function categoryOf(type: TraceEvent["type"]): Category {
       // The drama is the particles that LEAVE, coloured by what they were.
       return "system";
     case "compaction":
-      // The summary block is desaturated grey — smaller AND blurrier, the visual
-      // grammar for a lossy compression.
+    case "agent_result":
+      // Both are lossy digests — a compaction of the window, or a helper's whole
+      // work compressed into one summary. Desaturated grey is the shared visual
+      // grammar for "smaller and lossier than what it replaced".
       return "system";
   }
 }

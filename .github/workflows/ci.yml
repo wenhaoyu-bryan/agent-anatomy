@@ -26,4 +26,5 @@ jobs:
       - run: grep -q "Two ideas carry this episode" dist/episodes/where-agents-go-wrong/index.html
       - run: grep -q "an answer assembles with visible" dist/episodes/how-ai-reads-the-web/index.html
       - run: grep -q "reads those notes back and finishes the job" dist/episodes/how-agents-remember/index.html
+      - run: grep -q "its own small, fresh window" dist/episodes/how-agents-work-together/index.html
       - run: grep -q "Interactive explainers" dist/index.html
