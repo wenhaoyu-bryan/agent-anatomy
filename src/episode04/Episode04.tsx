@@ -1,6 +1,8 @@
 import { traceSchema } from "../trace/schema";
 import { MotionRoot } from "../episode/scroll/MotionRoot";
 import { HeroAmbient } from "../episode02/HeroAmbient";
+import { FanOutSection } from "./FanOutSection";
+import { HandoffFigure } from "./HandoffFigure";
 import { LaneReplay } from "./LaneReplay";
 import partyRaw from "../../traces/plan-birthday-party.trace.json";
 
@@ -18,8 +20,8 @@ const SUGGEST_URL = `${REPO_URL}/issues/new?template=episode-suggestion.md`;
 
 /**
  * Episode 04 shell — "How agents work together" (PLAN §6 palette, no new
- * colors). W2 builds the hero and the S5 lane replay; the S2 recap, S3 fan-out
- * scene, S4 handoffs figure, and full S6 close land in W3/W4.
+ * colors). Hero, the S3 fan-out share-clip scene, the S4 handoffs figure, and
+ * the S5 lane replay; the S2 recap and full S6 close land in W4.
  */
 export function Episode04() {
   return (
@@ -32,6 +34,8 @@ export function Episode04() {
       </a>
       <main id="main">
         <Hero />
+        <FanOutSection />
+        <HandoffFigure />
         <LaneReplay trace={partyTrace} />
         <Close />
       </main>

@@ -1095,3 +1095,54 @@ WebGL page since it has no dedicated scene yet. **W3's fan-out canvas is the fla
 budget risk** — measure it early. 83 tests green, 8 traces validate, all 6 CI
 sentinels pass, full build green (6 pages prerender). Demo = play the Episode 04
 replay end-to-end.
+
+### W3 — the fan-out scene + handoffs figure (this milestone)
+
+The visual-iteration milestone: S3's WebGL bloom-and-parallel-fill (the share
+clip) and the S4 handoffs figure, wired into the page between the hero and the
+replay (Hero → S3 → S4 → S5 → close). Interaction rule honored (W0/A4): S3 is a
+concept scene → **scroll-scrubbed**; the S5 replay stays player-driven.
+
+- **`FanOutCanvas.tsx`** — a dedicated in-flow `<Canvas>` (the Ep 02/03 precedent,
+  NOT the tracked-overlay slot machinery), structurally a sibling of
+  `CompactionCanvas`: instanced icosahedra, selective bloom (`luminanceThreshold
+  1`, HDR flare on arrival), box + `Edges` (§6), everything a **pure function of
+  scroll progress** so scrubbing back just re-evaluates. Three phases: task
+  (0–0.18) — three briefs clustered bright in the lead window; split (0.18–0.40) —
+  they fly out on bezier arcs to three helper windows that **bloom in** (group
+  scale 0→1, staggered per lane); fill (0.40–1) — each helper window fills
+  bottom-up across its own span with a **distinct rhythm** (VENUE first/fastest/
+  fullest 92 particles, FOOD 78, INVITES 48 — mirroring the trace's 730/630/230).
+  **No per-lane hue** — particles keep the event-type palette (cyan/amber); lanes
+  differ by position + rhythm (the W0 lesson). The fan-out canvas chunk is only
+  **2.0 KB gz** — it reuses the already-loaded three.js/SceneA + Edges + Bloom.
+- **`FanOutSection.tsx`** — CSS-sticky pinned (320vh), rAF-throttled scroll→
+  progress ref, `useGlReady()` gate, IntersectionObserver frameloop gating.
+  3 DOM stage captions (One job / Splitting / In parallel) + a "1 → 3 windows"
+  readout + `sr-only role=status`. Reduced-motion / no-WebGL / SSR → a compact
+  static before/after figure (one window's task → three part-full windows), no
+  tall scroll area.
+- **`HandoffFigure.tsx`** (S4, DOM) — a helper's full crowded window vs. the one
+  small, greyed, **softened** (blur + desaturate) block the lead receives, reusing
+  Ep 03's lossy grammar. The PM sentence in civilian words: "The lead never sees
+  the work — only the report … you keep the gist and lose the detail — until the
+  detail that got dropped was the one that mattered."
+
+**Verified in-browser** (build → preview → Playwright, 0 console errors; 2 warnings
+= three.js `THREE.Clock`, series-wide): the fan-out canvas mounts and **renders
+~1,500 draw calls/sec while in view, 0 off-screen** (IntersectionObserver gating
+works, §8). Scrubbing scroll drives the three phases cleanly (p 0.04 → "One job /
+1 window", 0.30 → "Splitting / 1 → 3 windows", 0.72 → "In parallel / 3 windows").
+Prerender ships the S3 + S4 copy and **no `<canvas>`** (reduced-motion/no-JS path).
+Mobile 390px: no horizontal overflow anywhere down the page; S3 + S4 present.
+
+**Budget risk resolved.** ep04 per-page ≈ **375 KB gz** (FanOutCanvas adds ~4 KB
+net over W2 — 2 KB canvas + 2 KB episode chunk — because three.js was already
+pulled by HeroAmbient). Well under 450. 83 tests, 8 traces, all 6 CI sentinels,
+build green (6 pages prerender).
+
+**Share-clip recording path verified** — the scene is deterministic, scrub-safe,
+and loopable, so a straight screen recording of the fan-out needs no editing. The
+actual 15-sec capture is owner-machine-only (headless RAF can't wall-clock-sample
+eased motion) — same launch-blocking status as the other four clips, per
+docs/launch.md; the W4 launch section documents the recipe.
