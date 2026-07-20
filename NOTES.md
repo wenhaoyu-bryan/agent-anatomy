@@ -1146,3 +1146,93 @@ and loopable, so a straight screen recording of the fan-out needs no editing. Th
 actual 15-sec capture is owner-machine-only (headless RAF can't wall-clock-sample
 eased motion) — same launch-blocking status as the other four clips, per
 docs/launch.md; the W4 launch section documents the recipe.
+
+---
+
+## Episode 04 · W4 — copy, polish, ship (season-one close)
+
+The last milestone: the two remaining narrative sections, the audit gate, the
+budget re-measure across all five pages, and every ship-time asset.
+
+**Copy — the two missing sections.**
+- **S2 recap** (`Episode04.tsx` → `Recap`, between Hero and the fan-out): "The
+  problem so far / One window, and it keeps filling up." Frames delegation as the
+  series' *third* way out of the finite window, next to Retrieval (Ep 02) and
+  Memory (Ep 03) — three cards, Delegation the cyan-accented "this episode." Ties
+  Ep 04 back into the season spine instead of standing alone.
+- **S6 close** was already built in W2/W3 (`Close`: series index with 04 "You are
+  here", the 05 suggestion card, "Five episodes, one engine"); W4 only reworded
+  the open-source card ("Five different runs …").
+
+**Writing-guidelines pass** (fetched fresh). Applied the non-conflicting rules,
+consciously kept house style where the two Vercel guides fight §6:
+- Kept — em dashes (the series' signature punctuation) and the rhetorical-question
+  hero ("Why would an AI need a team?", matching Ep 1.5's W0 rewrite). These are
+  the established voice; §6/house voice wins over the skill (CLAUDE.md).
+- Fixed — banned filler in shipped UI copy: `FanOutSection` S3 caption "It's
+  really three jobs" → "That one job is three …"; `Close` "Five very different
+  runs" → "Five different runs". "just" hits were all in code comments (out of
+  scope). Marketing "just watch" in launch.md kept (that file's tweet voice).
+
+**Web-design audit** (web-interface-guidelines, fetched fresh). Clean except one
+medium: the lane-meter CTX/`%` readouts update per-event but weren't tabular →
+digit jitter. Fixed with `tabular-nums` on the two `LaneCell` spans (scoped to
+Ep 04, not the shared `.micro-label`). Everything else already covered site-wide:
+`:focus-visible` ring is global (`global.css`), the `prefers-reduced-motion` reset
+is global, the mobile lane switcher is a real `role=tablist` of native buttons
+with `aria-selected`, each lane bar carries a `role=img` + descriptive
+`aria-label`, headings are one-H1-then-ordered-H2, empty lanes render "waiting for
+a brief…" (proper `…`). Timeline snag-markers (W2) are text-label buttons (not
+icon-only), so no `aria-label` needed.
+
+**Animation review** (manual review-animations read; motion was authored under the
+emil-design-eng tier in W2/W3). No medium+ findings: reveals animate only
+opacity/transform, the fan-out is a pure function of scroll progress (interruptible
+by nature, frameloop gated by IntersectionObserver, and behind `useGlReady` which
+excludes reduced-motion → static fallback), caption cross-fade re-keys per stage.
+The lane-bar `transition: width 300ms` is non-compositor but is the exact house
+context-meter pattern shared by all five episodes — kept for consistency.
+
+**Budgets re-measured** (initial JS, script src + modulepreload, gzipped, off the
+real `dist` HTML). All under the §1 450 KB ceiling:
+`landing 61.1 · 01 90.0 · 1.5 343.1 · 02 345.1 · 03 346.4 · 04 343.8 KB gz`.
+Ep 04 came in at **343.8** — a touch *leaner* than 02/03 (the W3 "≈375" was a
+conservative estimate; the actual modulepreload set is smaller). W4's new DOM
+sections add no measurable weight.
+
+**Ship assets.**
+- **OG image** `public/og/episode-04.png` (1200×630, on-brand): built a
+  self-contained HTML with the embedded site fonts (Space Grotesk + IBM Plex
+  Mono), screenshotted at exactly 1200×630. Same grammar as Ep 03's card —
+  telemetry grid, kicker, big display H1, mono subtitle, bottom status line
+  ("TEAM 1 lead → **3 helpers** · IN PARALLEL"), right-side bordered viz showing
+  the LEAD window fanning via three cyan bezier arcs into VENUE/FOOD/INVITES
+  helper windows filling bottom-up. Already wired in the episode `<head>` (W2).
+- **Landing** (`Landing.tsx`): 04 flipped from the old suggestion slot to a LIVE
+  card → the episode; a new 05 card carries the "What should we open up next?"
+  suggestion (Open). Verified in-browser: 01–04 LIVE, 05 Open.
+- **llms.txt**: Episode 04 paragraph (the birthday-party delegation run: snag +
+  spoiler-catch + re-brief), the 1.4 schema note (agents registry + per-event
+  `agentId` + `agent_spawn`/`agent_result`), the Pages entry, "Four → Five
+  episodes."
+- **README**: full Episode 04 section (fan-out / handoffs-are-summaries / replay,
+  the 1.4 schema paragraph, `docs/media/fan-out.gif` hero — *GIF still to be
+  recorded, owner-machine*), tagline moved to "**Five episodes, one engine**";
+  Ep 03's "season finale / Four episodes" framing softened.
+- **docs/launch.md**: Episode 04 launch section — angle "watch an AI split itself
+  into a team," 4-post X thread + LinkedIn (the "what is multi-agent, really?"
+  cut) + optional season-one Show HN wrap + the fan-out clip recipe (S3 pinned
+  scene, deterministic/scrub-safe).
+
+**Verified** (build → preview → Playwright): `tsc` + build green, all **6 pages
+prerender** (incl. landing), **83 tests**, **8 traces validate** (birthday-party:
+lead peak 1090/2400 · 3 helpers, tightest VENUE 730/1400), **0 console errors**,
+Recap + fan-out + landing cards render correctly, OG resolves to episode-04.png.
+
+**Not done / owner-machine (launch-blocking, same status as all prior clips):**
+the fan-out share GIF (`docs/media/fan-out.gif`) and OG-free video capture — a
+headless RAF can't wall-clock-sample eased/scroll motion; recipe is in launch.md.
+
+**Episode 05 deliberately left off the site** (owner instruction). The landing 05
+card is only the open "suggest a topic" slot; no episode-05 page, route, or trace
+exists. Season one = five shipped episodes (01, 1.5, 02, 03, 04).

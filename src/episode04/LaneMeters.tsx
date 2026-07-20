@@ -119,10 +119,10 @@ function LaneCell({
       </div>
 
       <div className="flex items-baseline justify-between">
-        <span className="micro-label">
+        <span className="micro-label tabular-nums">
           CTX {lane.tokensUsed.toLocaleString("en-US")}/{lane.window.toLocaleString("en-US")}
         </span>
-        <span className="micro-label">{pct.toFixed(0)}%</span>
+        <span className="micro-label tabular-nums">{pct.toFixed(0)}%</span>
       </div>
 
       {lane.contextItems.length === 0 && !isLead && (

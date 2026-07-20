@@ -63,8 +63,7 @@ read.*
 ![A crowded, colorful context window collapses into a single small, dim grey block as its token meter drops from 2,225 to 925](./docs/media/compaction.gif)
 
 **[How agents remember](https://wenhaoyu-bryan.github.io/agent-anatomy/episodes/how-agents-remember/)**
-is the season finale, and it settles the series' open wound: **context is not
-memory.** Context is what's in the window right now; memory is what an agent writes
+settles the series' open wound: **context is not memory.** Context is what's in the window right now; memory is what an agent writes
 down *outside* the window so it survives. An agent plans a Tokyo trip across two
 sessions — filling the window with research, compacting it into a smaller, lossy
 summary, saving notes to a file, and ending the day. The next morning, in a fresh
@@ -82,8 +81,36 @@ empty window, it reads those notes back and finishes.
 The `1.3` schema adds `compaction` (compressing context into a lossy summary),
 `session_break` (emptying the window), and `memory_read`/`memory_write` (notes that
 live outside the window as files) — and enforces that a note is read back
-byte-identical to what was written. **Four episodes, one engine, from one
-backward-compatible format** — the proof it generalizes.
+byte-identical to what was written.
+
+## Episode 04 — How agents work together
+
+![One full context window splits into three, each filling in parallel with its own share of the work](./docs/media/fan-out.gif)
+
+**[How agents work together](https://wenhaoyu-bryan.github.io/agent-anatomy/episodes/how-agents-work-together/)**
+is the third way out of the finite window. Retrieval (Ep 02) and memory (Ep 03) each
+kept one window from drowning; delegation splits the window itself. Asked to *plan a
+surprise 30th birthday party* — too much for one window to hold — a **lead** agent
+breaks the job into briefs and hands each to a **helper** with its own small, fresh
+window: a venue scout, a caterer, an invites writer, working in parallel. The lead
+never sees their work, only the one-line summary each hands back.
+
+- **The fan-out** — one job becomes three briefs, flying out to three windows that
+  fill at once. Where a single window would have overflowed, three stay light. (A
+  scroll-scrubbed WebGL scene, with a static fallback.)
+- **Handoffs are summaries** — a helper's crowded window collapses to one sentence
+  for the lead, drawn in Episode 03's lossy grammar: you keep the gist and lose the
+  detail — *until the detail that got dropped was the one that mattered.*
+- **The replay** — watch the lanes fill side by side, the venue scout come back **over
+  budget**, the lead re-brief and adapt, a spoiler get **caught** before it reaches the
+  guest of honour, and the whole team converge into one plan.
+
+The `1.4` schema adds a top-level `agents` registry and an `agentId` on every event,
+plus `agent_spawn` (hand a brief out) and `agent_result` (hand a summary back), so one
+flat, globally ordered trace can describe a lead and its parallel helpers — each lane's
+tokens checked against its own window. **Five episodes, one engine, from one
+backward-compatible format** — every earlier trace still plays unchanged. The proof it
+generalizes.
 
 This repo is two products, and both matter:
 

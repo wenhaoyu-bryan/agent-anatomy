@@ -34,6 +34,7 @@ export function Episode04() {
       </a>
       <main id="main">
         <Hero />
+        <Recap />
         <FanOutSection />
         <HandoffFigure />
         <LaneReplay trace={partyTrace} />
@@ -85,6 +86,78 @@ function Hero() {
         <span className="micro-label">Scroll</span>
       </div>
     </section>
+  );
+}
+
+function Recap() {
+  return (
+    <section id="recap" aria-labelledby="recap-title" className="px-4 py-24 md:px-6">
+      <div className="mx-auto w-full max-w-4xl">
+        <div className="reveal">
+          <p className="micro-label">The problem so far</p>
+          <h2
+            id="recap-title"
+            className="mt-3 max-w-2xl text-3xl font-medium tracking-tight text-balance md:text-4xl"
+            style={{ fontFamily: "var(--font-display)" }}
+          >
+            One window, and it keeps filling up
+          </h2>
+          <p className="mt-4 max-w-2xl leading-relaxed text-[var(--color-muted)]">
+            Every episode so far has fought the same limit: an agent thinks inside one context
+            window, and that window only holds so much. Fill it and the oldest things — sometimes
+            the original request — fall out the bottom. You&rsquo;ve already seen two ways to live
+            with that limit. This is the third.
+          </p>
+        </div>
+
+        <ul className="reveal mt-10 grid gap-3 md:grid-cols-3">
+          <WayOut
+            n="Retrieval"
+            ep="Episode 02"
+            body="Don’t hold the whole web — search for the one page you need, read it, and let the rest go."
+          />
+          <WayOut
+            n="Memory"
+            ep="Episode 03"
+            body="Don’t keep everything in the window — write notes to a file outside it, and read them back later."
+          />
+          <WayOut
+            n="Delegation"
+            ep="This episode"
+            body="Don’t do it all in one window — split the job and hand each piece to a helper with a window of its own."
+            active
+          />
+        </ul>
+      </div>
+    </section>
+  );
+}
+
+function WayOut({ n, ep, body, active }: { n: string; ep: string; body: string; active?: boolean }) {
+  return (
+    <li
+      className={`rounded-lg border px-5 py-4 ${
+        active
+          ? "border-[var(--color-tool)]/40 bg-[var(--color-panel)]/60"
+          : "border-[var(--color-hairline)] bg-[var(--color-panel)]/40"
+      }`}
+    >
+      <div className="flex items-baseline justify-between gap-2">
+        <p
+          className="font-medium"
+          style={{
+            fontFamily: "var(--font-display)",
+            color: active ? "var(--color-tool)" : undefined,
+          }}
+        >
+          {n}
+        </p>
+        <span className="micro-label shrink-0" style={active ? { color: "var(--color-tool)" } : undefined}>
+          {ep}
+        </span>
+      </div>
+      <p className="mt-2 text-sm leading-relaxed text-[var(--color-muted)]">{body}</p>
+    </li>
   );
 }
 
@@ -177,7 +250,7 @@ function Close() {
         <div className="reveal mt-12 rounded-lg border border-[var(--color-hairline)] bg-[var(--color-panel)]/40 px-5 py-6">
           <p className="micro-label">Open source</p>
           <p className="mt-3 leading-relaxed">
-            Five very different runs — fixing a page, overflowing, reading the web, remembering across
+            Five different runs — fixing a page, overflowing, reading the web, remembering across
             sessions, and now delegating to a team — all played by one engine from one trace format.
             The <code className="font-mono text-sm">1.4</code> schema adds parallel agent lanes, and
             every earlier trace still plays unchanged.

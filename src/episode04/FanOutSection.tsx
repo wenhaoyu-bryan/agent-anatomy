@@ -12,7 +12,7 @@ const STAGES = [
   {
     label: "One job",
     caption:
-      "It’s really three jobs — a venue, the food, the invitations. Held in a single window, that piles up fast, and the earliest details start to fall out the bottom.",
+      "That one job is three — a venue, the food, the invitations. Held in a single window, they pile up fast, and the earliest details start to fall out the bottom.",
   },
   {
     label: "Splitting",
