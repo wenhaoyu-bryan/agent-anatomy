@@ -76,22 +76,40 @@ export function SourcesAnswerPanel() {
 
     const compute = (): void => {
       const cr = container.getBoundingClientRect();
+
+      // The cards fill the column, so a thread drawn straight from a cited span
+      // up to its chip would cut through the cards between them. Instead route
+      // each thread through the reserved left gutter: measure where the cards
+      // start, give every citation its own vertical lane in that gutter, and bow
+      // the curve out to that lane so it passes *beside* the cards, not through.
+      let contentLeft = Infinity;
+      chipRefs.current.forEach((chip) => {
+        contentLeft = Math.min(contentLeft, chip.getBoundingClientRect().left - cr.left);
+      });
+      if (!Number.isFinite(contentLeft)) contentLeft = 40;
+      const laneMin = 12;
+      const laneMax = Math.max(laneMin + 6, contentLeft - 10);
+      const n = citations.length;
+      const laneX = (ci: number): number =>
+        n <= 1 ? (laneMin + laneMax) / 2 : laneMin + ((laneMax - laneMin) * ci) / (n - 1);
+
       const next: Thread[] = [];
       citations.forEach((citation, ci) => {
         const mark = markRefs.current[ci];
         if (!mark) return;
         const m = mark.getBoundingClientRect();
-        const x1 = m.left + m.width / 2 - cr.left;
-        const y1 = m.top - cr.top; // leave from the top of the span
+        const x1 = m.left - cr.left; // leave from the left edge of the cited span
+        const y1 = m.top + m.height / 2 - cr.top;
+        const gx = laneX(ci);
         for (const sourceId of citation.sourceIds) {
           const chip = chipRefs.current.get(sourceId);
           const source = byId.get(sourceId);
           if (!chip || !source) continue;
           const c = chip.getBoundingClientRect();
-          const x2 = c.left + c.width / 2 - cr.left;
-          const y2 = c.bottom - cr.top; // arrive at the bottom of the chip
-          const dy = y1 - y2;
-          const d = `M ${x1.toFixed(1)} ${y1.toFixed(1)} C ${x1.toFixed(1)} ${(y1 - dy * 0.42).toFixed(1)}, ${x2.toFixed(1)} ${(y2 + dy * 0.42).toFixed(1)}, ${x2.toFixed(1)} ${y2.toFixed(1)}`;
+          const x2 = c.left - cr.left; // arrive at the left edge of the chip
+          const y2 = c.top + c.height / 2 - cr.top;
+          // Cubic that bows left to the citation's gutter lane and back in.
+          const d = `M ${x1.toFixed(1)} ${y1.toFixed(1)} C ${gx.toFixed(1)} ${y1.toFixed(1)}, ${gx.toFixed(1)} ${y2.toFixed(1)}, ${x2.toFixed(1)} ${y2.toFixed(1)}`;
           next.push({ key: `${ci}-${sourceId}`, d, citeIndex: ci });
         }
       });
@@ -155,8 +173,9 @@ export function SourcesAnswerPanel() {
       </svg>
 
       {/* Sources on top, answer below, so threads arc up from each cited span to
-          the chip it came from — in a narrow column or full width alike. */}
-      <div className="flex flex-col gap-5">
+          the chip it came from. The left padding reserves the gutter the threads
+          route through, so they pass beside the cards, never through their text. */}
+      <div className="flex flex-col gap-5 pl-9">
         <div className="relative z-10">
           <span className="micro-label">Sources</span>
           {!hasSearched ? (

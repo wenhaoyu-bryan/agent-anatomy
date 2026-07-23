@@ -1,3 +1,6 @@
+import { SeriesIndex } from "../../series/SeriesIndex";
+import { SeriesNav } from "../../series/SeriesNav";
+
 const REPO_URL = "https://github.com/wenhaoyu-bryan/agent-anatomy";
 const PORTFOLIO_URL = "https://wenhaoyu-bryan.github.io/";
 
@@ -49,18 +52,9 @@ export function CloseSection() {
           ))}
         </ul>
 
-        {/* Episode 1.5 slot — structural, not built (PLAN §1 out of scope). */}
-        <div className="reveal mt-12 rounded-lg border border-dashed border-[var(--color-hairline)] px-5 py-5">
-          <div className="flex items-baseline justify-between gap-4">
-            <p className="micro-label">Episode 1.5 · In assembly</p>
-            <p className="micro-label">Next</p>
-          </div>
-          <p className="mt-2 text-lg font-medium" style={{ fontFamily: "var(--font-display)" }}>
-            Where agents go wrong
-          </p>
-          <p className="mt-1 text-sm text-[var(--color-muted)]">
-            Context overflow, wrong turns, dead ends — and how agents recover.
-          </p>
+        <div className="reveal mt-12">
+          <p className="micro-label">The series</p>
+          <SeriesIndex currentId="ep01" />
         </div>
 
         <div className="reveal mt-12 rounded-lg border border-[var(--color-hairline)] bg-[var(--color-panel)]/40 px-5 py-6">
@@ -96,6 +90,8 @@ export function CloseSection() {
             ★ Star on GitHub
           </a>
         </p>
+
+        <SeriesNav currentId="ep01" />
       </div>
     </section>
   );
