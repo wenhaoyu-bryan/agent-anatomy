@@ -1261,7 +1261,11 @@ exists. Season one = five shipped episodes (01, 1.5, 02, 03, 04).
 
 ## Releases
 
-Releases intentionally absent (owner decision, 2026-07). Revisit and cut the first
-release — at the then-current schema version — when the trace format gets its first
-external adopter: a third-party trace file, a meaningful fork, or a schema-stability
-issue.
+**v0.1.0 — launch release (2026-07).** First tagged release, cut at launch on the
+season-one state: five episodes (01, 1.5, 02, 03, 04), trace schema 1.4, headless
+replay engine. Tagged on the launch commit on `main`.
+
+Earlier in the pre-launch batch the plan was to leave releases absent until the
+trace format's first external adopter; that was reversed by owner decision to mark
+the launch itself with v0.1.0. Later releases still track meaningful milestones —
+schema-version bumps, new episodes, or an external-adopter event.
