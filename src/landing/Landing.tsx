@@ -4,6 +4,7 @@ const EPISODE_02_URL = `${import.meta.env.BASE_URL}episodes/how-ai-reads-the-web
 const EPISODE_03_URL = `${import.meta.env.BASE_URL}episodes/how-agents-remember/`;
 const EPISODE_04_URL = `${import.meta.env.BASE_URL}episodes/how-agents-work-together/`;
 const REPO_URL = "https://github.com/wenhaoyu-bryan/agent-anatomy";
+const PORTFOLIO_URL = "https://wenhaoyu-bryan.github.io/";
 const SUGGEST_URL =
   "https://github.com/wenhaoyu-bryan/agent-anatomy/issues/new?template=episode-suggestion.md";
 
@@ -74,7 +75,14 @@ export function Landing() {
 
         <footer className="mt-auto pt-16">
           <p className="micro-label">
-            Made by Wenhao Yu · Open source · MIT ·{" "}
+            Made by{" "}
+            <a
+              href={PORTFOLIO_URL}
+              className="underline decoration-[var(--color-hairline)] underline-offset-4 transition-colors hover:text-[var(--color-ink)]"
+            >
+              Wenhao Yu
+            </a>{" "}
+            · Open source · MIT ·{" "}
             <a
               href={REPO_URL}
               className="underline decoration-[var(--color-hairline)] underline-offset-4 transition-colors hover:text-[var(--color-ink)]"
