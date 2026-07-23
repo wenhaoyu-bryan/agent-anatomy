@@ -200,7 +200,13 @@ function Close() {
           >
             Wenhao Yu
           </a>{" "}
-          · Open source · MIT
+          · Open source · MIT ·{" "}
+          <a
+            href={REPO_URL}
+            className="underline decoration-[var(--color-hairline)] underline-offset-4 transition-colors hover:text-[var(--color-ink)]"
+          >
+            ★ Star on GitHub
+          </a>
         </p>
       </div>
     </section>
