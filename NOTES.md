@@ -1236,3 +1236,32 @@ headless RAF can't wall-clock-sample eased/scroll motion; recipe is in launch.md
 **Episode 05 deliberately left off the site** (owner instruction). The landing 05
 card is only the open "suggest a topic" slot; no episode-05 page, route, or trace
 exists. Season one = five shipped episodes (01, 1.5, 02, 03, 04).
+
+## Analytics (GoatCounter) — pre-launch
+
+- **Shared account, path-scoped.** Site code `bryanyu.goatcounter.com` — the same
+  code the portfolio uses; all properties share one dashboard, separated by path.
+- **Path integrity under the base path.** GoatCounter's default reports
+  `location.pathname`, which already carries `/agent-anatomy/…`, but to remove any
+  ambiguity (trailing-slash normalization, base-path quirks) each page hardcodes
+  its full real path via `window.goatcounter = { path: "…" }`. So the landing
+  reports `/agent-anatomy/` and each episode its own
+  `/agent-anatomy/episodes/<slug>/` — never collapsed to `/`, never base-stripped,
+  and always distinct from the portfolio's own paths (`/`, `/projects/…`) in the
+  shared dashboard.
+- **Off the critical path.** The official `//gc.zgo.at/count.js` loads `async` and
+  is external (not bundled), so it never joins the render-blocking chain and does
+  **not** count against the 450 KB per-page episode JS budget.
+- **Prerender coverage: kept, not skipped.** The tags sit in each source
+  `index.html` `<body>`; prerender only swaps the `<div id="root">` marker, so the
+  script survives into the prerendered HTML untouched — no-JS/prerender visits are
+  counted whenever the script itself loads.
+- **Privacy:** no cookies, no consent UI, no fingerprinting extras — GoatCounter's
+  default privacy behavior.
+
+## Releases
+
+Releases intentionally absent (owner decision, 2026-07). Revisit and cut the first
+release — at the then-current schema version — when the trace format gets its first
+external adopter: a third-party trace file, a meaningful fork, or a schema-stability
+issue.
