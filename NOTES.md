@@ -1258,3 +1258,10 @@ exists. Season one = five shipped episodes (01, 1.5, 02, 03, 04).
   counted whenever the script itself loads.
 - **Privacy:** no cookies, no consent UI, no fingerprinting extras — GoatCounter's
   default privacy behavior.
+
+## Releases
+
+Releases intentionally absent (owner decision, 2026-07). Revisit and cut the first
+release — at the then-current schema version — when the trace format gets its first
+external adopter: a third-party trace file, a meaningful fork, or a schema-stability
+issue.
