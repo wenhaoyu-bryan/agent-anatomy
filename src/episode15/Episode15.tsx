@@ -3,6 +3,8 @@ import { MotionRoot } from "../episode/scroll/MotionRoot";
 import { HeroAmbient } from "../episode02/HeroAmbient";
 import { RecapFigure } from "./RecapFigure";
 import { Vignette } from "./Vignette";
+import { SeriesIndex } from "../series/SeriesIndex";
+import { SeriesNav } from "../series/SeriesNav";
 import loopTrapRaw from "../../traces/the-loop-trap.trace.json";
 import overflowRaw from "../../traces/context-overflow.trace.json";
 import badObsRaw from "../../traces/bad-observation-recovery.trace.json";
@@ -13,7 +15,6 @@ const contextOverflow = traceSchema.parse(overflowRaw);
 const badObservation = traceSchema.parse(badObsRaw);
 
 const HOME_URL = import.meta.env.BASE_URL;
-const EPISODE_01 = `${HOME_URL}episodes/how-an-agent-works/`;
 const REPO_URL = "https://github.com/wenhaoyu-bryan/agent-anatomy";
 const PORTFOLIO_URL = "https://wenhaoyu-bryan.github.io/";
 
@@ -140,43 +141,7 @@ function Close() {
 
         <div className="reveal mt-14">
           <p className="micro-label">The series</p>
-          <ul className="mt-4 flex flex-col gap-3">
-            <li>
-              <a
-                href={EPISODE_01}
-                className="block rounded-lg border border-[var(--color-hairline)] bg-[var(--color-panel)]/40 px-5 py-4 transition-colors hover:border-[var(--color-muted)]"
-              >
-                <div className="flex items-baseline gap-4">
-                  <span
-                    className="shrink-0 font-mono tabular-nums text-[var(--color-tool)]"
-                  >
-                    01
-                  </span>
-                  <div>
-                    <p className="font-medium" style={{ fontFamily: "var(--font-display)" }}>
-                      How an AI agent works
-                    </p>
-                    <p className="mt-1 text-sm text-[var(--color-muted)]">
-                      The loop, the context window, and what happens when you give an AI a task.
-                    </p>
-                  </div>
-                </div>
-              </a>
-            </li>
-            <li className="rounded-lg border border-dashed border-[var(--color-hairline)] px-5 py-4">
-              <div className="flex items-baseline gap-4">
-                <span className="shrink-0 font-mono tabular-nums text-[var(--color-muted)]">02</span>
-                <div>
-                  <div className="flex items-center gap-3">
-                    <p className="font-medium" style={{ fontFamily: "var(--font-display)" }}>
-                      To be announced
-                    </p>
-                    <span className="micro-label">Planned</span>
-                  </div>
-                </div>
-              </div>
-            </li>
-          </ul>
+          <SeriesIndex currentId="ep15" />
         </div>
 
         <div className="reveal mt-12 rounded-lg border border-[var(--color-hairline)] bg-[var(--color-panel)]/40 px-5 py-6">
@@ -218,6 +183,8 @@ function Close() {
             ★ Star on GitHub
           </a>
         </p>
+
+        <SeriesNav currentId="ep15" />
       </div>
     </section>
   );

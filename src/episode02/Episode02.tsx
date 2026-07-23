@@ -5,14 +5,14 @@ import { HeroAmbient } from "./HeroAmbient";
 import { CutoffFigure } from "./CutoffFigure";
 import { FunnelSection } from "./FunnelSection";
 import { ReadingFigure } from "./ReadingFigure";
+import { SeriesIndex } from "../series/SeriesIndex";
+import { SeriesNav } from "../series/SeriesNav";
 import reheatRiceRaw from "../../traces/reheat-rice.trace.json";
 
 // Validated at load so a bad trace edit fails loudly in dev, like Episode 01.
 const reheatRice = traceSchema.parse(reheatRiceRaw);
 
 const HOME_URL = import.meta.env.BASE_URL;
-const EPISODE_01 = `${HOME_URL}episodes/how-an-agent-works/`;
-const EPISODE_15 = `${HOME_URL}episodes/where-agents-go-wrong/`;
 const REPO_URL = "https://github.com/wenhaoyu-bryan/agent-anatomy";
 const PORTFOLIO_URL = "https://wenhaoyu-bryan.github.io/";
 
@@ -123,47 +123,7 @@ function Close() {
 
         <div className="reveal mt-16">
           <p className="micro-label">The series</p>
-          <ul className="mt-4 flex flex-col gap-3">
-            <SeriesLink
-              href={EPISODE_01}
-              n="01"
-              title="How an AI agent works"
-              blurb="The loop, the context window, and what happens when you give an AI a task."
-            />
-            <SeriesLink
-              href={EPISODE_15}
-              n="1.5"
-              title="Where agents go wrong"
-              blurb="Three failure modes — a loop it can't escape, a memory that overflows, a false signal it almost trusts."
-            />
-            <li className="rounded-lg border border-[var(--color-tool)]/40 bg-[var(--color-panel)]/40 px-5 py-4">
-              <div className="flex items-baseline gap-4">
-                <span className="shrink-0 font-mono tabular-nums text-[var(--color-tool)]">02</span>
-                <div>
-                  <div className="flex items-center gap-3">
-                    <p className="font-medium" style={{ fontFamily: "var(--font-display)" }}>
-                      How AI reads the web
-                    </p>
-                    <span className="micro-label text-[var(--color-tool)]">You are here</span>
-                  </div>
-                  <p className="mt-1 text-sm text-[var(--color-muted)]">
-                    Search, selection, reading a page, and citations.
-                  </p>
-                </div>
-              </div>
-            </li>
-            <li className="rounded-lg border border-dashed border-[var(--color-hairline)] px-5 py-4">
-              <div className="flex items-baseline gap-4">
-                <span className="shrink-0 font-mono tabular-nums text-[var(--color-muted)]">03</span>
-                <div className="flex items-center gap-3">
-                  <p className="font-medium" style={{ fontFamily: "var(--font-display)" }}>
-                    To be announced
-                  </p>
-                  <span className="micro-label">Planned</span>
-                </div>
-              </div>
-            </li>
-          </ul>
+          <SeriesIndex currentId="ep02" />
         </div>
 
         <div className="reveal mt-12 rounded-lg border border-[var(--color-hairline)] bg-[var(--color-panel)]/40 px-5 py-6">
@@ -206,6 +166,8 @@ function Close() {
             ★ Star on GitHub
           </a>
         </p>
+
+        <SeriesNav currentId="ep02" />
       </div>
     </section>
   );
@@ -221,27 +183,6 @@ function Payoff({ n, head, children }: { n: string; head: string; children: Reac
         </p>
         <p className="mt-1 leading-relaxed text-[var(--color-muted)]">{children}</p>
       </div>
-    </li>
-  );
-}
-
-function SeriesLink({ href, n, title, blurb }: { href: string; n: string; title: string; blurb: string }) {
-  return (
-    <li>
-      <a
-        href={href}
-        className="block rounded-lg border border-[var(--color-hairline)] bg-[var(--color-panel)]/40 px-5 py-4 transition-colors hover:border-[var(--color-muted)]"
-      >
-        <div className="flex items-baseline gap-4">
-          <span className="shrink-0 font-mono tabular-nums text-[var(--color-tool)]">{n}</span>
-          <div>
-            <p className="font-medium" style={{ fontFamily: "var(--font-display)" }}>
-              {title}
-            </p>
-            <p className="mt-1 text-sm text-[var(--color-muted)]">{blurb}</p>
-          </div>
-        </div>
-      </a>
     </li>
   );
 }

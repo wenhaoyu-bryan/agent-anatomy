@@ -1,12 +1,7 @@
-const EPISODE_URL = `${import.meta.env.BASE_URL}episodes/how-an-agent-works/`;
-const EPISODE_1_5_URL = `${import.meta.env.BASE_URL}episodes/where-agents-go-wrong/`;
-const EPISODE_02_URL = `${import.meta.env.BASE_URL}episodes/how-ai-reads-the-web/`;
-const EPISODE_03_URL = `${import.meta.env.BASE_URL}episodes/how-agents-remember/`;
-const EPISODE_04_URL = `${import.meta.env.BASE_URL}episodes/how-agents-work-together/`;
+import { EPISODES, SUGGEST_ENTRY } from "../series/episodes";
+
 const REPO_URL = "https://github.com/wenhaoyu-bryan/agent-anatomy";
 const PORTFOLIO_URL = "https://wenhaoyu-bryan.github.io/";
-const SUGGEST_URL =
-  "https://github.com/wenhaoyu-bryan/agent-anatomy/issues/new?template=episode-suggestion.md";
 
 export function Landing() {
   return (
@@ -29,46 +24,21 @@ export function Landing() {
         </header>
 
         <section className="mt-16 grid gap-4 md:mt-24">
+          {EPISODES.map((ep) => (
+            <EpisodeCard
+              key={ep.id}
+              number={ep.number}
+              title={ep.title}
+              blurb={ep.blurb}
+              href={ep.href}
+              status="live"
+            />
+          ))}
           <EpisodeCard
-            number="01"
-            title="How an AI agent works"
-            blurb="The loop, the context window, and what actually happens when you give an AI a task."
-            href={EPISODE_URL}
-            status="live"
-          />
-          <EpisodeCard
-            number="1.5"
-            title="Where agents go wrong"
-            blurb="Context overflow, wrong turns, dead ends — and how agents recover."
-            href={EPISODE_1_5_URL}
-            status="live"
-          />
-          <EpisodeCard
-            number="02"
-            title="How AI reads the web"
-            blurb="Search, selection, reading a page, and citations — how an agent finds and cites the web."
-            href={EPISODE_02_URL}
-            status="live"
-          />
-          <EpisodeCard
-            number="03"
-            title="How agents remember"
-            blurb="Compaction, session breaks, and the notes an agent writes to itself so work survives an empty window."
-            href={EPISODE_03_URL}
-            status="live"
-          />
-          <EpisodeCard
-            number="04"
-            title="How agents work together"
-            blurb="Delegation — one lead splitting a job across helpers, each with its own fresh window, working in parallel."
-            href={EPISODE_04_URL}
-            status="live"
-          />
-          <EpisodeCard
-            number="05"
-            title="What should we open up next?"
-            blurb="Season one is done — the series stays open. Suggest a topic you’d want to see."
-            href={SUGGEST_URL}
+            number={SUGGEST_ENTRY.number}
+            title={SUGGEST_ENTRY.title}
+            blurb={SUGGEST_ENTRY.blurb}
+            href={SUGGEST_ENTRY.href}
             status="suggest"
           />
         </section>
