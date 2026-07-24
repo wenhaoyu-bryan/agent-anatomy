@@ -1269,3 +1269,90 @@ Earlier in the pre-launch batch the plan was to leave releases absent until the
 trace format's first external adopter; that was reversed by owner decision to mark
 the launch itself with v0.1.0. Later releases still track meaningful milestones —
 schema-version bumps, new episodes, or an external-adopter event.
+
+## Post-launch patch — reload scroll dump on pinned scenes (2026-07)
+
+**Bug (reported):** on the scroll-scrub episodes you sometimes had to hard-refresh
+(Cmd+Shift+R) to "see the animation" — a soft reload (Cmd+R) landed you well below
+the scene you were watching, so the canvas looked like it never loaded.
+
+**Root cause — a layout shift racing the browser's scroll restoration.** The pinned
+WebGL scenes (§7 — funnel/Ep 02, compaction/Ep 03, fan-out/Ep 04) gate on
+`useGlReady()`. On first paint `ready` is `false`, so each renders a **short static
+fallback**; up to ~2.5s later (its `requestIdleCallback` timeout) `ready` flips and
+the section grows to **~320–340vh**. `history.scrollRestoration` was the browser
+default `"auto"`, so a reload restored the old `scrollY` **against the short layout**;
+when the section then expanded above the viewport, scroll anchoring shoved the reader
+down by the growth amount — right past the scene. Hard refresh only "fixed" it because
+it starts at the top, so you scrolled into the scene fresh.
+
+Measured before fix (soft reload from mid-scene): Ep 02 funnel 2400 → **4667**
+(+2267), Ep 04 fan-out 2273 → **4306** (+2033), Ep 03 compaction similar — scene
+pushed fully out of view each time.
+
+**Fix.** One line of intent in `MotionRoot` (rendered by all five episodes, not the
+landing): `history.scrollRestoration = "manual"`. With manual restoration the browser
+never auto-restores, so every load/reload starts at the top and the reader scrolls
+into each pinned scene cleanly — nothing left to race the growth. Explicit `#hash`
+deep-links still resolve normally (verified). Set before the reduced-motion guard so
+it always applies (harmless under reduced motion, where the sections never grow).
+
+Chosen over reserving the tall height up front (tri-state `useGlReady`): that keeps
+reload-position but reintroduces the SSR/hydration + restore-timing race it was meant
+to remove. Reload-to-top is the expected behavior for a linear scrollytelling page.
+
+### Test procedure (manual, localhost)
+
+Run `pnpm dev` (Node 22.20.0 toolchain), open `http://localhost:5173/agent-anatomy/`.
+
+1. **Regression repro is gone.** Open Ep 02 (`/episodes/how-ai-reads-the-web/`).
+   Scroll into the funnel until a canvas is drawing and the stage reads e.g.
+   "03 · Selected". Press **Cmd+R**. Expect: page reloads **at the top** (hero), not
+   dumped below the funnel. Scroll back down — the funnel animates normally.
+   Repeat on Ep 03 (`/episodes/how-agents-remember/`, compaction) and Ep 04
+   (`/episodes/how-agents-work-together/`, fan-out).
+2. **Setting is live.** In DevTools console: `history.scrollRestoration` → `"manual"`
+   on every episode page.
+3. **No animation regression.** With each pinned scene in view, confirm the canvas
+   renders and the stage caption tracks scroll (funnel narrows, compaction condenses,
+   fan-out splits 1→3).
+4. **Hash deep-links intact.** Load `…/episodes/how-ai-reads-the-web/#debrief`
+   directly — it should land on the debrief section, not the top.
+5. **Reduced motion unaffected.** Enable OS "Reduce motion", reload an episode — the
+   static fallbacks show, no tall pinned sections, page still starts at the top.
+
+### Pre-merge bug sweep + e2e suite (2026-07)
+
+Swept all six pages in a real browser (Playwright) before merging the fix — no
+new bugs. Every episode: 0 console errors (only benign noise — GoatCounter
+declining to count on localhost, and three.js's internal `THREE.Clock`
+deprecation from r3f), 0 `.reveal` blocks stuck hidden after a full scroll-through,
+all canvases rendering, `history.scrollRestoration === "manual"`. Replay transport
+(play / jump-to-end) works; mobile width (390px) has no horizontal overflow.
+
+**Added a Playwright e2e suite** (`e2e/episodes.spec.ts`, `playwright.config.ts`,
+`pnpm test:e2e`) — the unit tests only cover the pure replay/schema logic, so
+layout/scroll/WebGL behavior had no automated guard. 14 tests: per-episode smoke
+(title, manual restoration, no stuck reveals, no console errors), the
+scroll-restoration regression (reload inside each pinned scene lands back at the
+top), pinned canvases render when scrolled in, series footer nav routing, replay
+jump-to-end, mobile no-overflow.
+
+Two harness notes worth keeping:
+- **Proxy.** An `http_proxy` is set; Playwright's server-readiness check and page
+  fetches must bypass it for localhost or it can't see the dev server (spawns a
+  second one that then stalls under the Node gotcha). `test:e2e` sets
+  `NO_PROXY=localhost,127.0.0.1`; run the dev server with the pinned Node first
+  and `reuseExistingServer` picks it up.
+- **HMR vs. test artifacts.** The dev server watches the project root, so a
+  root-level `test-results/` triggered full page reloads mid-test (nondeterministic
+  "execution context destroyed"). Playwright `outputDir` now writes under
+  `node_modules/.cache/` — never watched by Vite.
+
+**Known non-bug: load-time hash deep-links can't be tested on the dev server.**
+`…/how-an-agent-works/#debrief` cold-loads to the top, not the section — dev ships
+an empty `#root`, so the browser's fragment scroll finds no target before React
+hydrates and never retries. Confirmed on Ep 01 (which has no growing pinned scene),
+so it's the empty-root artifact, not the pinned-growth interaction, and it's
+orthogonal to the restoration fix. Production ships prerendered HTML where the
+target exists on load, so the anchor resolves there. Not fixed; recorded here.
